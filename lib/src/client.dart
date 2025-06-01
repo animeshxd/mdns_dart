@@ -3,12 +3,14 @@
 /// This module provides comprehensive mDNS client functionality for discovering
 /// and querying services on the network, with support for multiple interfaces
 /// and both IPv4 and IPv6.
-library client;
+library;
 
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
+
+import 'utils.dart';
 import 'dns.dart';
 
 /// mDNS multicast addresses and port
@@ -363,7 +365,8 @@ class _Client {
     // Set multicast interface
     if (_ipv4MulticastConn != null) {
       try {
-        _ipv4MulticastConn!.multicastInterface = iface;
+        _ipv4MulticastConn!.setMulticastInterface(iface);
+        // Set IPv4 multicast interface using setRawOption
       } catch (e) {
         // Interface setting failed for IPv4
       }
@@ -371,7 +374,8 @@ class _Client {
 
     if (_ipv6MulticastConn != null) {
       try {
-        _ipv6MulticastConn!.multicastInterface = iface;
+        // Set IPv6 multicast interface using setRawOption
+        _ipv4MulticastConn!.setMulticastInterface(iface);
       } catch (e) {
         // Interface setting failed for IPv6
       }

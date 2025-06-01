@@ -7,6 +7,8 @@ library;
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+
+import 'utils.dart';
 import 'dns.dart';
 import 'zone.dart';
 
@@ -70,7 +72,7 @@ class MDNSServer {
         
         // Set network interface if specified
         if (_config.networkInterface != null) {
-          _ipv4Socket!.multicastInterface = _config.networkInterface!;
+          _ipv4Socket!.setMulticastInterface(_config.networkInterface!);
         }
         
         // Listen for packets
@@ -94,9 +96,9 @@ class MDNSServer {
         // Join multicast group
         _ipv6Socket!.joinMulticast(InternetAddress(_ipv6MulticastAddr));
         
-        // Set network interface if specified
+        // Set network interface if specified (IPv6)
         if (_config.networkInterface != null) {
-          _ipv6Socket!.multicastInterface = _config.networkInterface!;
+          _ipv6Socket!.setMulticastInterface(_config.networkInterface!);
         }
         
         // Listen for packets
