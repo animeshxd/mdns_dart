@@ -1,3 +1,7 @@
+## 1.0.2
+
+- Exported `src/server.dart` in the public API (lib/mdns_dart.dart) for direct access to mDNS server functionality.
+
 ## 1.0.1
 
 - Fixed deprecated `multicastInterface` usage with modern `setRawOption` implementation

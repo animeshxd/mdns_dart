@@ -1,34 +1,13 @@
 import 'package:mdns_dart/mdns_dart.dart';
-import 'dart:io';
 
 /// Integration test for the clean mdns_dart package
 void main() async {
-  print('Testing Clean mDNS Dart Package');
-  print('==================================\n');
-
-  // Find the 'enp37s0' network interface
-  final interfaces = await NetworkInterface.list();
-  NetworkInterface? targetInterface;
-  for (final iface in interfaces) {
-    if (iface.name == 'enp37s0') {
-      targetInterface = iface;
-      break;
-    }
-  }
-
-  if (targetInterface == null) {
-    print('enp37s0 interface not found');
-    return;
-  }
-
-  print('Using interface: ${targetInterface.addresses.first.address}\n');
 
   // Discover HTTP services
   print('Discovering HTTP services...');
   final results = await MDNSClient.discover(
     '_http._tcp',
     timeout: Duration(seconds: 3),
-    networkInterface: targetInterface,
   );
 
   if (results.isEmpty) {

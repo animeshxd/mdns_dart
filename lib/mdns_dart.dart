@@ -15,3 +15,4 @@ library;
 export 'src/dns.dart';
 export 'src/zone.dart'; 
 export 'src/client.dart';
+export 'src/server.dart';
