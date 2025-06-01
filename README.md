@@ -1,6 +1,10 @@
 # mdns_dart
 
-A pure Dart mDNS (Multicast DNS) library for service discovery and advertising. This library is a port of HashiCorp's mDNS implementation.
+## About
+
+`mdns_dart` is a pure Dart implementation of Multicast DNS (mDNS) for service discovery and advertising on local networks. This library is a direct port of the proven [HashiCorp mDNS](https://github.com/hashicorp/mdns) implementation, adapted for the Dart ecosystem. It requires no native dependencies and works across platforms, including Docker and bridge networks.
+
+This project is not affiliated with HashiCorp. All original credit goes to HashiCorp; this port is maintained for Dart and Flutter developers.
 
 ## Features
 
