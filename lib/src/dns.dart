@@ -521,7 +521,7 @@ class PTRRecord extends DNSResourceRecord {
   }
 
   static PTRRecord? parseRData(ByteDataReader reader, String name, int dnsClass, int ttl, int rdLength) {
-    final startOffset = reader.offset;
+    // final startOffset = reader.offset;
     final target = _readDomainName(reader);
     if (target == null) return null;
     
