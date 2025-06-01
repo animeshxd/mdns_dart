@@ -11,10 +11,9 @@ This project is not affiliated with HashiCorp. All original credit goes to Hashi
 | Feature | This Library | multicast_dns | nsd | flutter_nsd |
 |---------|-------------|---------------|-----|-------------|
 | **Interface Binding** | Full support | Default only | Platform dependent | Platform dependent |
-| **Docker/Bridge Networks** | Works perfectly | Limited | Inconsistent | Inconsistent |
+| **Docker/Bridge Networks** | Works perfectly | Limited | Platform dependent | Platform dependent |
 | **Service Advertising** | Full server | Discovery only | Via platform APIs | Via platform APIs |
 | **Pure Dart** | No native deps | Pure Dart | Platform plugins | Platform plugins |
-| **ESP32/IoT Discovery** | Excellent | Limited | Depends on platform | Depends on platform |
 | **Direct Socket Control** | No control | Limited | No control | No control |
 | **Cross-Network Discovery** | Solved | Broken | Platform dependent | Platform dependent |
 
