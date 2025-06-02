@@ -1,3 +1,8 @@
+## 1.0.3
+
+- Updated `README.md` with improved feature comparison table and refined examples.
+- Improved example/example.md
+
 ## 1.0.2
 
 - Exported `src/server.dart` in the public API (lib/mdns_dart.dart) for direct access to mDNS server functionality.
