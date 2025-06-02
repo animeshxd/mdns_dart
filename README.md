@@ -8,14 +8,14 @@ This project is not affiliated with HashiCorp. All original credit goes to Hashi
 
 ## Features
 
-| Feature | This Library | multicast_dns | nsd | flutter_nsd |
-|---------|-------------|---------------|-----|-------------|
-| **Interface Binding** | Full support | Default only | Platform dependent | Platform dependent |
-| **Docker/Bridge Networks** | Works perfectly | Limited | Platform dependent | Platform dependent |
-| **Service Advertising** | Full server | Discovery only | Via platform APIs | Via platform APIs |
-| **Pure Dart** | No native deps | Pure Dart | Platform plugins | Platform plugins |
-| **Direct Socket Control** | No control | Limited | No control | No control |
-| **Cross-Network Discovery** | Solved | Broken | Platform dependent | Platform dependent |
+| Feature                  | This Library     | multicast_dns   | nsd                | flutter_nsd        |
+|--------------------------|------------------|-----------------|--------------------|--------------------|
+| **Interface Binding**    | Full support     | Full support    | Platform dependent | Platform dependent |
+| **Docker/Bridge Networks**| Works perfectly  | Limited         | Platform dependent | Platform dependent |
+| **Service Advertising**  | Full server      | Discovery only  | Via platform APIs  | Via platform APIs  |
+| **Pure Dart**            | No native deps   | Pure Dart       | Platform plugins   | Platform plugins   |
+| **Direct Socket Control**| No control       | Limited         | No control         | No control         |
+| **Cross-Network Discovery**| Solved           | Broken          | Platform dependent | Platform dependent |
 
 ## Getting Started
 
@@ -35,7 +35,7 @@ void main() async {
   // Discover all HTTP services on the local network
   final results = await MDNSClient.discover('_http._tcp');
   for (final service in results) {
-    print('Service: \\${service.name} at \\${service.primaryAddress?.address}:\\${service.port}');
+    print('Service: ${service.name} at ${service.primaryAddress?.address}:${service.port}');
   }
 }
 ```
