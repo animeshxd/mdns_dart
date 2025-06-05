@@ -1,31 +1,20 @@
+import 'dart:io';
 import 'package:mdns_dart/mdns_dart.dart';
 
-import 'dart:io';
-
-/// ESP32 test for the clean mdns_dart package
+/// mDNS client with specific network interface
 void main() async {
-  print('Testing Clean Package - ESP32 Discovery');
-  print('==========================================\n');
+  print('Discovering services on docker0 interface...');
 
   // Find the 'docker0' network interface
   final interfaces = await NetworkInterface.list();
-  NetworkInterface? targetInterface;
-  for (final iface in interfaces) {
-    if (iface.name == 'docker0') {
-      targetInterface = iface;
-      break;
-    }
-  }
+  final targetInterface = interfaces.where((i) => i.name == 'docker0').firstOrNull;
 
   if (targetInterface == null) {
     print('docker0 interface not found');
     return;
   }
 
-  print('Using interface: ${targetInterface.addresses.first.address}\n');
-
   // Discover ESP32 services
-  print('Discovering ESP32 services...');
   final results = await MDNSClient.discover(
     '_esp32auth._udp',
     timeout: Duration(seconds: 3),
@@ -49,6 +38,4 @@ void main() async {
       print('');
     }
   }
-
-  print('Done.');
 }

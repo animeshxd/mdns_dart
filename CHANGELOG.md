@@ -1,3 +1,10 @@
+## 1.0.4
+
+- Added configurable socket options: `reusePort`, `reuseAddress`, and `multicastHops`
+- Added comprehensive logging support for debugging network issues
+- Minimized example files for cleaner demonstration
+- Formatted for improved readability
+
 ## 1.0.3
 
 - Updated `README.md` with improved feature comparison table and refined examples.

@@ -1,10 +1,9 @@
 import 'package:mdns_dart/mdns_dart.dart';
 
-/// Integration test for the clean mdns_dart package
+/// Simple mDNS client example
 void main() async {
-
-  // Discover HTTP services
   print('Discovering HTTP services...');
+
   final results = await MDNSClient.discover(
     '_http._tcp',
     timeout: Duration(seconds: 3),
@@ -27,6 +26,4 @@ void main() async {
       print('');
     }
   }
-
-  print('Done.');
 }

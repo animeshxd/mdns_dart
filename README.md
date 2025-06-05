@@ -17,26 +17,39 @@ This project is not affiliated with HashiCorp. All original credit goes to Hashi
 | **Direct Socket Control**| No control       | Limited         | No control         | No control         |
 | **Cross-Network Discovery**| Solved           | Broken          | Platform dependent | Platform dependent |
 
-## Getting Started
+## Installation
 
-Add to your `pubspec.yaml`:
+```bash
+dart pub add mdns_dart
+```
+
+Or add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
   mdns_dart: ^latest
 ```
 
-## Minimal Example
+For the latest development version:
+
+```bash
+dart pub add mdns_dart --git-url https://github.com/animeshxd/mdns_dart.git
+```
+
+## Usage
+
+### Import
 
 ```dart
 import 'package:mdns_dart/mdns_dart.dart';
+```
 
-void main() async {
-  // Discover all HTTP services on the local network
-  final results = await MDNSClient.discover('_http._tcp');
-  for (final service in results) {
-    print('Service: ${service.name} at ${service.primaryAddress?.address}:${service.port}');
-  }
+### Basic Service Discovery
+
+```dart
+final results = await MDNSClient.discover('_http._tcp');
+for (final service in results) {
+  print('${service.name} at ${service.primaryAddress?.address}:${service.port}');
 }
 ```
 
