@@ -1,3 +1,7 @@
+## 1.0.5
+
+- Updated package description to specify support for both mDNS service discovery and advertisement.
+
 ## 1.0.4
 
 - Added configurable socket options: `reusePort`, `reuseAddress`, and `multicastHops`
