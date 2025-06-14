@@ -55,18 +55,16 @@ class ServiceEntry {
 
   /// Checks if we have all the info we need for a complete service
   bool get isComplete {
-    return (addrV4 != null || addrV6 != null) &&
-        port != 0 &&
-        _hasTXT;
+    return (addrV4 != null || addrV6 != null) && port != 0 && _hasTXT;
   }
 
   /// IPv4 address (backward compatibility - returns first address)
-  InternetAddress? get addrV4{
+  InternetAddress? get addrV4 {
     return addrsV4?.first;
   }
 
   /// IPv6 address (backward compatibility - returns first address)
-  InternetAddress? get addrV6{
+  InternetAddress? get addrV6 {
     return addrsV6?.first;
   }
 
@@ -237,16 +235,16 @@ class MDNSClient {
 
   /// Discovers services and collects results into a list
   static Future<List<ServiceEntry>> discover(
-      String service, {
-        Duration timeout = const Duration(seconds: 3),
-        String domain = 'local',
-        NetworkInterface? networkInterface,
-        bool wantUnicastResponse = false,
-        bool reusePort = true,
-        bool reuseAddress = true,
-        int multicastHops = 1,
-        void Function(String message)? logger,
-      }) async {
+    String service, {
+    Duration timeout = const Duration(seconds: 3),
+    String domain = 'local',
+    NetworkInterface? networkInterface,
+    bool wantUnicastResponse = false,
+    bool reusePort = true,
+    bool reuseAddress = true,
+    int multicastHops = 1,
+    void Function(String message)? logger,
+  }) async {
     final results = <ServiceEntry>[];
     final completer = Completer<List<ServiceEntry>>();
 
@@ -267,7 +265,7 @@ class MDNSClient {
       late StreamSubscription subscription;
 
       subscription = stream.listen(
-            (entry) {
+        (entry) {
           results.add(entry);
         },
         onDone: () {
@@ -321,11 +319,11 @@ class _Client {
     required int multicastHops,
     void Function(String message)? logger,
   }) : _useIPv4 = useIPv4,
-        _useIPv6 = useIPv6,
-        _reusePort = reusePort,
-        _reuseAddress = reuseAddress,
-        _multicastHops = multicastHops,
-        _logger = logger {
+       _useIPv6 = useIPv6,
+       _reusePort = reusePort,
+       _reuseAddress = reuseAddress,
+       _multicastHops = multicastHops,
+       _logger = logger {
     if (!_useIPv4 && !_useIPv6) {
       throw ArgumentError('Must enable at least one of IPv4 and IPv6');
     }
@@ -458,12 +456,12 @@ class _Client {
   /// Note for Android: If you encounter binding issues with reusePort=true,
   /// try setting reusePort=false and handle socket conflicts manually.
   Future<RawDatagramSocket> _bindMulticastSocket(
-      InternetAddress address,
-      int port, {
-        required bool reusePort,
-        required bool reuseAddress,
-        required int multicastHops,
-      }) async {
+    InternetAddress address,
+    int port, {
+    required bool reusePort,
+    required bool reuseAddress,
+    required int multicastHops,
+  }) async {
     // Try binding with the specified options
     final socket = await RawDatagramSocket.bind(
       address,
@@ -488,7 +486,7 @@ class _Client {
       try {
         // Find IPv4 address on this interface
         final ipv4Addr = iface.addresses.firstWhere(
-              (addr) => addr.type == InternetAddressType.IPv4,
+          (addr) => addr.type == InternetAddressType.IPv4,
         );
 
         // Rebind unicast socket to specific interface IP
@@ -746,9 +744,9 @@ class _Client {
 
   /// Listens on a socket for incoming packets
   StreamSubscription _listenOnSocket(
-      RawDatagramSocket socket,
-      StreamController<_MessageAddr> messageController,
-      ) {
+    RawDatagramSocket socket,
+    StreamController<_MessageAddr> messageController,
+  ) {
     _log('Started listening on socket ${socket.address}:${socket.port}');
 
     return socket.listen((event) {
@@ -890,7 +888,7 @@ class _ServiceMatcher {
   final String _fullServicePattern;
 
   _ServiceMatcher(String service, String domain)
-      :_fullServicePattern = '${_trimDot(service)}.${_trimDot(domain)}.';
+    : _fullServicePattern = '${_trimDot(service)}.${_trimDot(domain)}.';
 
   /// Checks if a service entry name matches the requested service
   bool matches(String serviceName) {
@@ -902,7 +900,9 @@ class _ServiceMatcher {
         : '$serviceName.';
 
     // Direct match check
-    if (normalizedName.toLowerCase().endsWith(_fullServicePattern.toLowerCase())) {
+    if (normalizedName.toLowerCase().endsWith(
+      _fullServicePattern.toLowerCase(),
+    )) {
       return true;
     }
 
