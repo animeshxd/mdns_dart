@@ -682,7 +682,7 @@ class NSECRecord extends DNSResourceRecord {
     required this.types,
     super.dnsClass = DNSClass.IN,
     super.ttl = 120,
-  }) : super(type: 47); // 47 is the type code for NSEC
+  }) : super(type: DNSType.NSEC);
 
   @override
   void writeTo(ByteDataWriter writer) {
