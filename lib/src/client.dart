@@ -686,9 +686,15 @@ class _Client {
               entry.markHasTXT();
               break;
 
+            case NSECRecord _:
+              _log(
+                'Ignoring NSEC record for ${record.name} (used for negative responses)',
+              );
+              break;
+
             default:
               _log(
-                'Processing unknown record type: ${record.runtimeType} for ${record.name}',
+                'Ignoring unknown record type: ${record.runtimeType} for ${record.name}',
               );
           }
 

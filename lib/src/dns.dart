@@ -18,6 +18,7 @@ class DNSType {
   static const int AAAA = 28;
   static const int SRV = 33;
   static const int OPT = 41;
+  static const int NSEC = 47;
   static const int ANY = 255;
 }
 
@@ -348,6 +349,9 @@ abstract class DNSResourceRecord {
       case DNSType.TXT:
         record = TXTRecord.parseRData(reader, name, dnsClass, ttl, rdLength);
         break;
+      case DNSType.NSEC:
+        record = NSECRecord.parseRData(reader, name, dnsClass, ttl, rdLength);
+        break;
       default:
         // Skip unknown record types
         reader.skip(rdLength);
@@ -660,6 +664,126 @@ class TXTRecord extends DNSResourceRecord {
     return TXTRecord(
       name: name,
       strings: strings,
+      dnsClass: dnsClass,
+      ttl: ttl,
+    );
+  }
+}
+
+
+/// NSEC record (Next Secure)
+class NSECRecord extends DNSResourceRecord {
+  final String nextDomainName;
+  final List<int> types;
+
+  NSECRecord({
+    required super.name,
+    required this.nextDomainName,
+    required this.types,
+    super.dnsClass = DNSClass.IN,
+    super.ttl = 120,
+  }) : super(type: 47); // 47 is the type code for NSEC
+
+  @override
+  void writeTo(ByteDataWriter writer) {
+    _writeDomainName(writer, name);
+    writer.writeUint16(type);
+    writer.writeUint16(dnsClass);
+    writer.writeUint32(ttl);
+    
+    final rdataWriter = ByteDataWriter();
+    _writeDomainName(rdataWriter, nextDomainName);
+    
+    // Write bitmap
+    final maxType = types.reduce((a, b) => a > b ? a : b);
+    final windowCount = (maxType >> 8) + 1;
+    
+    for (var window = 0; window < windowCount; window++) {
+      final windowTypes = types.where((t) => (t >> 8) == window).toList();
+      if (windowTypes.isEmpty) continue;
+      
+      final maxByte = (windowTypes.reduce((a, b) => a > b ? a : b) & 0xFF) >> 3;
+      final bitmap = List<int>.filled(maxByte + 1, 0);
+      
+      for (final type in windowTypes) {
+        final byteOffset = (type & 0xFF) >> 3;
+        final bitOffset = type & 0x7;
+        bitmap[byteOffset] |= (1 << (7 - bitOffset));
+      }
+      
+      rdataWriter.writeUint8(window);
+      rdataWriter.writeUint8(bitmap.length);
+      for (final byte in bitmap) {
+        rdataWriter.writeUint8(byte);
+      }
+    }
+    
+    final rdataBytes = rdataWriter.toBytes();
+    writer.writeUint16(rdataBytes.length);
+    writer.writeBytes(rdataBytes);
+  }
+
+  @override
+  Uint8List get rdata {
+    final writer = ByteDataWriter();
+    _writeDomainName(writer, nextDomainName);
+    
+    // Write bitmap using same logic as writeTo
+    final maxType = types.reduce((a, b) => a > b ? a : b);
+    final windowCount = (maxType >> 8) + 1;
+    
+    for (var window = 0; window < windowCount; window++) {
+      final windowTypes = types.where((t) => (t >> 8) == window).toList();
+      if (windowTypes.isEmpty) continue;
+      
+      final maxByte = (windowTypes.reduce((a, b) => a > b ? a : b) & 0xFF) >> 3;
+      final bitmap = List<int>.filled(maxByte + 1, 0);
+      
+      for (final type in windowTypes) {
+        final byteOffset = (type & 0xFF) >> 3;
+        final bitOffset = type & 0x7;
+        bitmap[byteOffset] |= (1 << (7 - bitOffset));
+      }
+      
+      writer.writeUint8(window);
+      writer.writeUint8(bitmap.length);
+      for (final byte in bitmap) {
+        writer.writeUint8(byte);
+      }
+    }
+    
+    return writer.toBytes();
+  }
+
+  static NSECRecord? parseRData(ByteDataReader reader, String name, int dnsClass, int ttl, int rdLength) {
+    final startOffset = reader.offset;
+    
+    final nextDomainName = _readDomainName(reader);
+    if (nextDomainName == null) return null;
+    
+    final types = <int>[];
+    while (reader.offset < startOffset + rdLength) {
+      if (reader.remainingLength < 2) return null;
+      
+      final window = reader.readUint8();
+      final bitmapLength = reader.readUint8();
+      
+      if (reader.remainingLength < bitmapLength) return null;
+      
+      for (var i = 0; i < bitmapLength; i++) {
+        final byte = reader.readUint8();
+        for (var bit = 0; bit < 8; bit++) {
+          if (byte & (1 << (7 - bit)) != 0) {
+            types.add((window << 8) | (i * 8 + bit));
+          }
+        }
+      }
+    }
+    
+    return NSECRecord(
+      name: name,
+      nextDomainName: nextDomainName,
+      types: types,
       dnsClass: dnsClass,
       ttl: ttl,
     );
