@@ -1,3 +1,10 @@
+## 1.1.0
+
+- Added support for multiple addresses in a `ServiceEntry`
+- Added filtering to ignore non-service related mDNS packets
+- Added NSEC record support with proper type 47 handling per RFC 4034
+- Improved unknown record type handling with explicit logging
+
 ## 1.0.5
 
 - Updated package description to specify support for both mDNS service discovery and advertisement.
