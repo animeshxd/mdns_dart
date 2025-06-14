@@ -25,11 +25,11 @@ class ServiceEntry {
   /// Hostname
   String host;
 
-  /// IPv4 address
-  InternetAddress? addrV4;
+  /// IPv4 addresses
+  List<InternetAddress>? addrsV4;
 
-  /// IPv6 address
-  InternetAddress? addrV6;
+  /// IPv6 addresses
+  List<InternetAddress>? addrsV6;
 
   /// Service port
   int port;
@@ -40,34 +40,63 @@ class ServiceEntry {
   /// All TXT record fields
   List<String> infoFields;
 
-  /// Legacy address field (use addrV4/addrV6 instead)
-  @Deprecated('Use addrV4 or addrV6 instead')
-  InternetAddress? addr;
-
   bool _hasTXT = false;
   bool _sent = false;
 
   ServiceEntry({
     required this.name,
     this.host = '',
-    this.addrV4,
-    this.addrV6,
+    this.addrsV4,
+    this.addrsV6,
     this.port = 0,
     this.info = '',
     this.infoFields = const [],
-    this.addr,
   });
 
   /// Checks if we have all the info we need for a complete service
   bool get isComplete {
-    return (addrV4 != null || addrV6 != null || addr != null) &&
+    return (addrV4 != null || addrV6 != null) &&
         port != 0 &&
         _hasTXT;
   }
 
+  /// IPv4 address (backward compatibility - returns first address)
+  InternetAddress? get addrV4{
+    return addrsV4?.first;
+  }
+
+  /// IPv6 address (backward compatibility - returns first address)
+  InternetAddress? get addrV6{
+    return addrsV6?.first;
+  }
+
   /// Gets the primary IP address (prefers IPv4)
   InternetAddress? get primaryAddress {
-    return addrV4 ?? addrV6 ?? addr;
+    return addrV4 ?? addrV6;
+  }
+
+  /// Gets all IP addresses (IPv4 and IPv6 combined)
+  List<InternetAddress> get allAddresses {
+    final List<InternetAddress> addresses = [];
+    if (addrsV4 != null) addresses.addAll(addrsV4!);
+    if (addrsV6 != null) addresses.addAll(addrsV6!);
+    return addresses;
+  }
+
+  /// Adds an IPv4 address if it doesn't already exist
+  void addIPv4Address(InternetAddress address) {
+    addrsV4 ??= [];
+    if (!addrsV4!.any((addr) => addr.address == address.address)) {
+      addrsV4!.add(address);
+    }
+  }
+
+  /// Adds an IPv6 address if it doesn't already exist
+  void addIPv6Address(InternetAddress address) {
+    addrsV6 ??= [];
+    if (!addrsV6!.any((addr) => addr.address == address.address)) {
+      addrsV6!.add(address);
+    }
   }
 
   /// Marks this entry as having TXT records
@@ -85,8 +114,9 @@ class ServiceEntry {
 
   @override
   String toString() {
-    final address = primaryAddress?.address ?? 'unknown';
-    return 'ServiceEntry(name: $name, host: $host, address: $address, port: $port)';
+    final allAddrs = allAddresses.map((a) => a.address).join(', ');
+    final addressStr = allAddrs.isNotEmpty ? allAddrs : 'unknown';
+    return 'ServiceEntry(name: $name, host: $host, addresses: [$addressStr], port: $port)';
   }
 }
 
@@ -207,16 +237,16 @@ class MDNSClient {
 
   /// Discovers services and collects results into a list
   static Future<List<ServiceEntry>> discover(
-    String service, {
-    Duration timeout = const Duration(seconds: 3),
-    String domain = 'local',
-    NetworkInterface? networkInterface,
-    bool wantUnicastResponse = false,
-    bool reusePort = true,
-    bool reuseAddress = true,
-    int multicastHops = 1,
-    void Function(String message)? logger,
-  }) async {
+      String service, {
+        Duration timeout = const Duration(seconds: 3),
+        String domain = 'local',
+        NetworkInterface? networkInterface,
+        bool wantUnicastResponse = false,
+        bool reusePort = true,
+        bool reuseAddress = true,
+        int multicastHops = 1,
+        void Function(String message)? logger,
+      }) async {
     final results = <ServiceEntry>[];
     final completer = Completer<List<ServiceEntry>>();
 
@@ -237,7 +267,7 @@ class MDNSClient {
       late StreamSubscription subscription;
 
       subscription = stream.listen(
-        (entry) {
+            (entry) {
           results.add(entry);
         },
         onDone: () {
@@ -291,11 +321,11 @@ class _Client {
     required int multicastHops,
     void Function(String message)? logger,
   }) : _useIPv4 = useIPv4,
-       _useIPv6 = useIPv6,
-       _reusePort = reusePort,
-       _reuseAddress = reuseAddress,
-       _multicastHops = multicastHops,
-       _logger = logger {
+        _useIPv6 = useIPv6,
+        _reusePort = reusePort,
+        _reuseAddress = reuseAddress,
+        _multicastHops = multicastHops,
+        _logger = logger {
     if (!_useIPv4 && !_useIPv6) {
       throw ArgumentError('Must enable at least one of IPv4 and IPv6');
     }
@@ -428,12 +458,12 @@ class _Client {
   /// Note for Android: If you encounter binding issues with reusePort=true,
   /// try setting reusePort=false and handle socket conflicts manually.
   Future<RawDatagramSocket> _bindMulticastSocket(
-    InternetAddress address,
-    int port, {
-    required bool reusePort,
-    required bool reuseAddress,
-    required int multicastHops,
-  }) async {
+      InternetAddress address,
+      int port, {
+        required bool reusePort,
+        required bool reuseAddress,
+        required int multicastHops,
+      }) async {
     // Try binding with the specified options
     final socket = await RawDatagramSocket.bind(
       address,
@@ -458,7 +488,7 @@ class _Client {
       try {
         // Find IPv4 address on this interface
         final ipv4Addr = iface.addresses.firstWhere(
-          (addr) => addr.type == InternetAddressType.IPv4,
+              (addr) => addr.type == InternetAddressType.IPv4,
         );
 
         // Rebind unicast socket to specific interface IP
@@ -516,6 +546,9 @@ class _Client {
     _log(
       'Starting query for service: $serviceAddr (timeout: ${params.timeout})',
     );
+
+    // Create service matcher for filtering results
+    final serviceMatcher = _ServiceMatcher(params.service, params.domain);
 
     // Create message channel for received packets
     final messageController = StreamController<_MessageAddr>();
@@ -622,28 +655,26 @@ class _Client {
 
             case ARecord a:
               _log('Processing A record: ${a.name} -> ${a.address}');
-              entry.addrV4 = InternetAddress(a.address);
-              entry.addr ??= entry.addrV4; // For backward compatibility
+              final ipv4Address = InternetAddress(a.address);
+              entry.addIPv4Address(ipv4Address);
 
-              // Key fix: Propagate A record to all entries that reference this host
+              // Propagate A record to all entries that reference this host
               for (final otherEntry in inProgress.values) {
                 if (otherEntry.host == a.name && otherEntry != entry) {
-                  otherEntry.addrV4 = InternetAddress(a.address);
-                  otherEntry.addr ??= otherEntry.addrV4;
+                  otherEntry.addIPv4Address(ipv4Address);
                 }
               }
               break;
 
             case AAAARecord aaaa:
               _log('Processing AAAA record: ${aaaa.name} -> ${aaaa.address}');
-              entry.addrV6 = InternetAddress(aaaa.address);
-              entry.addr ??= entry.addrV6; // For backward compatibility
+              final ipv6Address = InternetAddress(aaaa.address);
+              entry.addIPv6Address(ipv6Address);
 
-              // Key fix: Propagate AAAA record to all entries that reference this host
+              // Propagate AAAA record to all entries that reference this host
               for (final otherEntry in inProgress.values) {
                 if (otherEntry.host == aaaa.name && otherEntry != entry) {
-                  otherEntry.addrV6 = InternetAddress(aaaa.address);
-                  otherEntry.addr ??= otherEntry.addrV6;
+                  otherEntry.addIPv6Address(ipv6Address);
                 }
               }
               break;
@@ -666,9 +697,10 @@ class _Client {
           // Check if entry is complete and hasn't been sent
           if (entry.isComplete &&
               !entry.wasSent &&
-              !completedServices.contains(entry.name)) {
+              !completedServices.contains(entry.name) &&
+              serviceMatcher.matches(entry.name)) {
             _log(
-              'Service entry complete: ${entry.name} at ${entry.addr}:${entry.port}',
+              'Service entry complete and matches query: ${entry.name} at ${entry.allAddresses.map((a) => a.address).join(', ')}:${entry.port}',
             );
             entry.markSent();
             completedServices.add(entry.name);
@@ -679,9 +711,10 @@ class _Client {
           for (final otherEntry in inProgress.values) {
             if (otherEntry.isComplete &&
                 !otherEntry.wasSent &&
-                !completedServices.contains(otherEntry.name)) {
+                !completedServices.contains(otherEntry.name) &&
+                serviceMatcher.matches(otherEntry.name)) {
               _log(
-                'Linked service entry complete: ${otherEntry.name} at ${otherEntry.addr}:${otherEntry.port}',
+                'Linked service entry complete and matches query: ${otherEntry.name} at ${otherEntry.allAddresses.map((a) => a.address).join(', ')}:${otherEntry.port}',
               );
               otherEntry.markSent();
               completedServices.add(otherEntry.name);
@@ -713,9 +746,9 @@ class _Client {
 
   /// Listens on a socket for incoming packets
   StreamSubscription _listenOnSocket(
-    RawDatagramSocket socket,
-    StreamController<_MessageAddr> messageController,
-  ) {
+      RawDatagramSocket socket,
+      StreamController<_MessageAddr> messageController,
+      ) {
     _log('Started listening on socket ${socket.address}:${socket.port}');
 
     return socket.listen((event) {
@@ -850,6 +883,42 @@ class _MessageAddr {
   final int port;
 
   _MessageAddr(this.message, this.source, this.port);
+}
+
+/// Helper class for matching service entries against the requested service
+class _ServiceMatcher {
+  final String _fullServicePattern;
+
+  _ServiceMatcher(String service, String domain)
+      :_fullServicePattern = '${_trimDot(service)}.${_trimDot(domain)}.';
+
+  /// Checks if a service entry name matches the requested service
+  bool matches(String serviceName) {
+    if (serviceName.isEmpty) return false;
+
+    // Normalize the service name
+    final normalizedName = serviceName.endsWith('.')
+        ? serviceName
+        : '$serviceName.';
+
+    // Direct match check
+    if (normalizedName.toLowerCase().endsWith(_fullServicePattern.toLowerCase())) {
+      return true;
+    }
+
+    // Check if it's an instance of the requested service
+    // Instance names typically follow the pattern: "Instance Name._service._tcp.local."
+    final parts = normalizedName.split('.');
+    if (parts.length >= 3) {
+      // Rebuild the service pattern from the parts (skip the instance name)
+      final serviceFromName = parts.skip(1).join('.');
+      if (serviceFromName.toLowerCase() == _fullServicePattern.toLowerCase()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 }
 
 /// Trims dots from start and end of string
