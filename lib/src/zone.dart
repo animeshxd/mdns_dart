@@ -1,5 +1,5 @@
 /// mDNS zone and service management.
-/// 
+///
 /// This module provides the Zone interface and MDNSService implementation
 /// for serving mDNS records dynamically.
 library;
@@ -20,22 +20,22 @@ abstract class Zone {
 class MDNSService implements Zone {
   /// Service instance name (e.g. "My Printer")
   final String instance;
-  
+
   /// Service type (e.g. "_http._tcp.")
   final String service;
-  
+
   /// Domain (defaults to "local.")
   final String domain;
-  
+
   /// Host machine DNS name (e.g. "mymachine.local.")
   final String hostName;
-  
+
   /// Service port number
   final int port;
-  
+
   /// IP addresses for the service's host
   final List<InternetAddress> ips;
-  
+
   /// Service TXT records
   final List<String> txt;
 
@@ -101,21 +101,29 @@ class MDNSService implements Zone {
     if (actualIPs.isEmpty) {
       try {
         // Try to lookup the hostname
-        actualIPs = await InternetAddress.lookup(actualHostName.substring(0, actualHostName.length - 1));
+        actualIPs = await InternetAddress.lookup(
+          actualHostName.substring(0, actualHostName.length - 1),
+        );
       } catch (e) {
         // If that fails, try with domain suffix
         try {
-          final fullHostName = '${actualHostName.substring(0, actualHostName.length - 1)}$domain';
-          actualIPs = await InternetAddress.lookup(fullHostName.substring(0, fullHostName.length - 1));
+          final fullHostName =
+              '${actualHostName.substring(0, actualHostName.length - 1)}$domain';
+          actualIPs = await InternetAddress.lookup(
+            fullHostName.substring(0, fullHostName.length - 1),
+          );
         } catch (e) {
-          throw ArgumentError('Could not determine IP addresses for $actualHostName');
+          throw ArgumentError(
+            'Could not determine IP addresses for $actualHostName',
+          );
         }
       }
     }
 
     // Validate IP addresses
     for (final ip in actualIPs) {
-      if (ip.type != InternetAddressType.IPv4 && ip.type != InternetAddressType.IPv6) {
+      if (ip.type != InternetAddressType.IPv4 &&
+          ip.type != InternetAddressType.IPv6) {
         throw ArgumentError('Invalid IP address: ${ip.address}');
       }
     }
@@ -134,8 +142,10 @@ class MDNSService implements Zone {
   @override
   List<DNSResourceRecord> records(DNSQuestion question) {
     // Normalize query name to FQDN format (with trailing dot)
-    final queryName = question.name.endsWith('.') ? question.name : '${question.name}.';
-    
+    final queryName = question.name.endsWith('.')
+        ? question.name
+        : '${question.name}.';
+
     switch (queryName) {
       case String name when name == enumAddr:
         return _serviceEnum(question);
@@ -204,33 +214,43 @@ class MDNSService implements Zone {
     switch (question.type) {
       case DNSType.ANY:
         final records = <DNSResourceRecord>[];
-        
+
         // Add SRV record
-        records.addAll(_instanceRecords(DNSQuestion(
-          name: instanceAddr,
-          type: DNSType.SRV,
-          dnsClass: DNSClass.IN,
-        )));
-        
+        records.addAll(
+          _instanceRecords(
+            DNSQuestion(
+              name: instanceAddr,
+              type: DNSType.SRV,
+              dnsClass: DNSClass.IN,
+            ),
+          ),
+        );
+
         // Add TXT record
-        records.addAll(_instanceRecords(DNSQuestion(
-          name: instanceAddr,
-          type: DNSType.TXT,
-          dnsClass: DNSClass.IN,
-        )));
-        
+        records.addAll(
+          _instanceRecords(
+            DNSQuestion(
+              name: instanceAddr,
+              type: DNSType.TXT,
+              dnsClass: DNSClass.IN,
+            ),
+          ),
+        );
+
         return records;
 
       case DNSType.A:
         final records = <DNSResourceRecord>[];
         for (final ip in ips) {
           if (ip.type == InternetAddressType.IPv4) {
-            records.add(ARecord(
-              name: hostName,
-              address: ip.address,
-              dnsClass: DNSClass.IN,
-              ttl: defaultTTL,
-            ));
+            records.add(
+              ARecord(
+                name: hostName,
+                address: ip.address,
+                dnsClass: DNSClass.IN,
+                ttl: defaultTTL,
+              ),
+            );
           }
         }
         return records;
@@ -239,12 +259,14 @@ class MDNSService implements Zone {
         final records = <DNSResourceRecord>[];
         for (final ip in ips) {
           if (ip.type == InternetAddressType.IPv6) {
-            records.add(AAAARecord(
-              name: hostName,
-              address: ip.address,
-              dnsClass: DNSClass.IN,
-              ttl: defaultTTL,
-            ));
+            records.add(
+              AAAARecord(
+                name: hostName,
+                address: ip.address,
+                dnsClass: DNSClass.IN,
+                ttl: defaultTTL,
+              ),
+            );
           }
         }
         return records;
@@ -263,17 +285,25 @@ class MDNSService implements Zone {
         ];
 
         // Add A/AAAA records as additional
-        records.addAll(_instanceRecords(DNSQuestion(
-          name: instanceAddr,
-          type: DNSType.A,
-          dnsClass: DNSClass.IN,
-        )));
-        
-        records.addAll(_instanceRecords(DNSQuestion(
-          name: instanceAddr,
-          type: DNSType.AAAA,
-          dnsClass: DNSClass.IN,
-        )));
+        records.addAll(
+          _instanceRecords(
+            DNSQuestion(
+              name: instanceAddr,
+              type: DNSType.A,
+              dnsClass: DNSClass.IN,
+            ),
+          ),
+        );
+
+        records.addAll(
+          _instanceRecords(
+            DNSQuestion(
+              name: instanceAddr,
+              type: DNSType.AAAA,
+              dnsClass: DNSClass.IN,
+            ),
+          ),
+        );
 
         return records;
 
@@ -300,7 +330,7 @@ class MDNSService implements Zone {
   /// Parses TXT record strings into key-value pairs
   static Map<String, String> parseTXTRecords(List<String> txt) {
     final result = <String, String>{};
-    
+
     for (final record in txt) {
       final parts = record.split('=');
       if (parts.length >= 2) {
@@ -311,14 +341,14 @@ class MDNSService implements Zone {
         result[parts[0]] = '';
       }
     }
-    
+
     return result;
   }
 
   @override
   String toString() {
     return 'MDNSService(instance: $instance, service: $service, '
-           'host: $hostName, port: $port, ips: ${ips.map((ip) => ip.address).join(', ')})';
+        'host: $hostName, port: $port, ips: ${ips.map((ip) => ip.address).join(', ')})';
   }
 }
 
@@ -342,11 +372,11 @@ class MultiServiceZone implements Zone {
   @override
   List<DNSResourceRecord> records(DNSQuestion question) {
     final allRecords = <DNSResourceRecord>[];
-    
+
     for (final service in _services) {
       allRecords.addAll(service.records(question));
     }
-    
+
     return allRecords;
   }
 
@@ -365,11 +395,11 @@ String _trimDot(String s) {
 bool _isValidFQDN(String s) {
   if (s.isEmpty) return false;
   if (!s.endsWith('.')) return false;
-  
+
   // Basic validation - could be more comprehensive
   final labels = s.substring(0, s.length - 1).split('.');
   if (labels.isEmpty) return false;
-  
+
   for (final label in labels) {
     if (label.isEmpty) return false;
     if (label.length > 63) return false;
@@ -377,6 +407,6 @@ bool _isValidFQDN(String s) {
       return false;
     }
   }
-  
+
   return true;
 }

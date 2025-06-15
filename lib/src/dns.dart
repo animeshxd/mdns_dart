@@ -1,5 +1,5 @@
 /// DNS message format definitions and utilities for mDNS operations.
-/// 
+///
 /// This module provides comprehensive DNS message parsing and building
 /// capabilities, supporting all standard DNS record types used in mDNS.
 library;
@@ -30,21 +30,21 @@ class DNSClass {
   static const int HS = 4;
   static const int NONE = 254;
   static const int ANY = 255;
-  
+
   /// Cache flush bit for mDNS (RFC 6762)
   static const int FLUSH = 0x8000;
 }
 
 /// DNS message header flags
 class DNSFlags {
-  static const int QR = 0x8000;        // Query/Response
-  static const int AA = 0x0400;        // Authoritative Answer
-  static const int TC = 0x0200;        // Truncated
-  static const int RD = 0x0100;        // Recursion Desired
-  static const int RA = 0x0080;        // Recursion Available
-  static const int AD = 0x0020;        // Authentic Data
-  static const int CD = 0x0010;        // Checking Disabled
-  
+  static const int QR = 0x8000; // Query/Response
+  static const int AA = 0x0400; // Authoritative Answer
+  static const int TC = 0x0200; // Truncated
+  static const int RD = 0x0100; // Recursion Desired
+  static const int RA = 0x0080; // Recursion Available
+  static const int AD = 0x0020; // Authentic Data
+  static const int CD = 0x0010; // Checking Disabled
+
   // Response codes
   static const int NOERROR = 0;
   static const int FORMERR = 1;
@@ -130,44 +130,44 @@ class DNSMessage {
   /// Packs the DNS message into binary format
   Uint8List pack() {
     final buffer = ByteDataWriter();
-    
+
     // Write header
     header.writeTo(buffer);
-    
+
     // Write questions
     for (final question in questions) {
       question.writeTo(buffer);
     }
-    
+
     // Write answers
     for (final answer in answers) {
       answer.writeTo(buffer);
     }
-    
+
     // Write authority records
     for (final auth in authority) {
       auth.writeTo(buffer);
     }
-    
+
     // Write additional records
     for (final add in additional) {
       add.writeTo(buffer);
     }
-    
+
     return buffer.toBytes();
   }
 
   /// Parses a DNS message from binary data
   static DNSMessage? parse(Uint8List data) {
     if (data.length < 12) return null;
-    
+
     try {
       final reader = ByteDataReader(data);
-      
+
       // Parse header
       final header = DNSHeader.parse(reader);
       if (header == null) return null;
-      
+
       // Parse questions
       final questions = <DNSQuestion>[];
       for (int i = 0; i < header.qdcount; i++) {
@@ -175,7 +175,7 @@ class DNSMessage {
         if (question == null) return null;
         questions.add(question);
       }
-      
+
       // Parse answers
       final answers = <DNSResourceRecord>[];
       for (int i = 0; i < header.ancount; i++) {
@@ -183,7 +183,7 @@ class DNSMessage {
         if (answer == null) return null;
         answers.add(answer);
       }
-      
+
       // Parse authority
       final authority = <DNSResourceRecord>[];
       for (int i = 0; i < header.nscount; i++) {
@@ -191,7 +191,7 @@ class DNSMessage {
         if (auth == null) return null;
         authority.add(auth);
       }
-      
+
       // Parse additional
       final additional = <DNSResourceRecord>[];
       for (int i = 0; i < header.arcount; i++) {
@@ -199,7 +199,7 @@ class DNSMessage {
         if (add == null) return null;
         additional.add(add);
       }
-      
+
       return DNSMessage(
         header: header,
         questions: questions,
@@ -242,7 +242,7 @@ class DNSHeader {
 
   static DNSHeader? parse(ByteDataReader reader) {
     if (reader.remainingLength < 12) return null;
-    
+
     return DNSHeader(
       id: reader.readUint16(),
       flags: reader.readUint16(),
@@ -268,11 +268,7 @@ class DNSQuestion {
   final int type;
   final int dnsClass;
 
-  DNSQuestion({
-    required this.name,
-    required this.type,
-    required this.dnsClass,
-  });
+  DNSQuestion({required this.name, required this.type, required this.dnsClass});
 
   void writeTo(ByteDataWriter writer) {
     _writeDomainName(writer, name);
@@ -283,15 +279,11 @@ class DNSQuestion {
   static DNSQuestion? parse(ByteDataReader reader) {
     final name = _readDomainName(reader);
     if (name == null || reader.remainingLength < 4) return null;
-    
+
     final type = reader.readUint16();
     final dnsClass = reader.readUint16();
-    
-    return DNSQuestion(
-      name: name,
-      type: type,
-      dnsClass: dnsClass,
-    );
+
+    return DNSQuestion(name: name, type: type, dnsClass: dnsClass);
   }
 
   bool get wantsUnicastResponse => (dnsClass & 0x8000) != 0;
@@ -322,16 +314,16 @@ abstract class DNSResourceRecord {
   static DNSResourceRecord? parse(ByteDataReader reader) {
     final name = _readDomainName(reader);
     if (name == null || reader.remainingLength < 10) return null;
-    
+
     final type = reader.readUint16();
     final dnsClass = reader.readUint16();
     final ttl = reader.readUint32();
     final rdLength = reader.readUint16();
-    
+
     if (reader.remainingLength < rdLength) return null;
-    
+
     final rdataStart = reader.offset;
-    
+
     DNSResourceRecord? record;
     switch (type) {
       case DNSType.A:
@@ -357,13 +349,13 @@ abstract class DNSResourceRecord {
         reader.skip(rdLength);
         return null;
     }
-    
+
     // Ensure we consumed exactly rdLength bytes
     final consumed = reader.offset - rdataStart;
     if (consumed != rdLength) {
       reader.skip(rdLength - consumed);
     }
-    
+
     return record;
   }
 
@@ -389,7 +381,7 @@ class ARecord extends DNSResourceRecord {
     writer.writeUint16(dnsClass);
     writer.writeUint32(ttl);
     writer.writeUint16(4); // RDLENGTH
-    
+
     final parts = address.split('.');
     for (final part in parts) {
       writer.writeUint8(int.parse(part));
@@ -402,14 +394,20 @@ class ARecord extends DNSResourceRecord {
     return Uint8List.fromList(parts.map((p) => int.parse(p)).toList());
   }
 
-  static ARecord? parseRData(ByteDataReader reader, String name, int dnsClass, int ttl, int rdLength) {
+  static ARecord? parseRData(
+    ByteDataReader reader,
+    String name,
+    int dnsClass,
+    int ttl,
+    int rdLength,
+  ) {
     if (rdLength != 4) return null;
-    
+
     final a = reader.readUint8();
     final b = reader.readUint8();
     final c = reader.readUint8();
     final d = reader.readUint8();
-    
+
     return ARecord(
       name: name,
       address: '$a.$b.$c.$d',
@@ -437,11 +435,11 @@ class AAAARecord extends DNSResourceRecord {
     writer.writeUint16(dnsClass);
     writer.writeUint32(ttl);
     writer.writeUint16(16); // RDLENGTH
-    
+
     // Parse IPv6 address and write 16 bytes
     final parts = address.split(':');
     final bytes = <int>[];
-    
+
     // Handle IPv6 address parsing (simplified)
     for (int i = 0; i < 8; i++) {
       final part = i < parts.length ? parts[i] : '0';
@@ -449,7 +447,7 @@ class AAAARecord extends DNSResourceRecord {
       bytes.add((value >> 8) & 0xFF);
       bytes.add(value & 0xFF);
     }
-    
+
     for (final byte in bytes) {
       writer.writeUint8(byte);
     }
@@ -460,28 +458,34 @@ class AAAARecord extends DNSResourceRecord {
     // Simplified IPv6 encoding
     final parts = address.split(':');
     final bytes = <int>[];
-    
+
     for (int i = 0; i < 8; i++) {
       final part = i < parts.length ? parts[i] : '0';
       final value = int.parse(part.isEmpty ? '0' : part, radix: 16);
       bytes.add((value >> 8) & 0xFF);
       bytes.add(value & 0xFF);
     }
-    
+
     return Uint8List.fromList(bytes);
   }
 
-  static AAAARecord? parseRData(ByteDataReader reader, String name, int dnsClass, int ttl, int rdLength) {
+  static AAAARecord? parseRData(
+    ByteDataReader reader,
+    String name,
+    int dnsClass,
+    int ttl,
+    int rdLength,
+  ) {
     if (rdLength != 16) return null;
-    
+
     final bytes = reader.readBytes(16);
     final parts = <String>[];
-    
+
     for (int i = 0; i < 16; i += 2) {
       final value = (bytes[i] << 8) | bytes[i + 1];
       parts.add(value.toRadixString(16));
     }
-    
+
     return AAAARecord(
       name: name,
       address: parts.join(':'),
@@ -508,11 +512,11 @@ class PTRRecord extends DNSResourceRecord {
     writer.writeUint16(type);
     writer.writeUint16(dnsClass);
     writer.writeUint32(ttl);
-    
+
     final rdataWriter = ByteDataWriter();
     _writeDomainName(rdataWriter, target);
     final rdataBytes = rdataWriter.toBytes();
-    
+
     writer.writeUint16(rdataBytes.length);
     writer.writeBytes(rdataBytes);
   }
@@ -524,17 +528,18 @@ class PTRRecord extends DNSResourceRecord {
     return writer.toBytes();
   }
 
-  static PTRRecord? parseRData(ByteDataReader reader, String name, int dnsClass, int ttl, int rdLength) {
+  static PTRRecord? parseRData(
+    ByteDataReader reader,
+    String name,
+    int dnsClass,
+    int ttl,
+    int rdLength,
+  ) {
     // final startOffset = reader.offset;
     final target = _readDomainName(reader);
     if (target == null) return null;
-    
-    return PTRRecord(
-      name: name,
-      target: target,
-      dnsClass: dnsClass,
-      ttl: ttl,
-    );
+
+    return PTRRecord(name: name, target: target, dnsClass: dnsClass, ttl: ttl);
   }
 }
 
@@ -561,14 +566,14 @@ class SRVRecord extends DNSResourceRecord {
     writer.writeUint16(type);
     writer.writeUint16(dnsClass);
     writer.writeUint32(ttl);
-    
+
     final rdataWriter = ByteDataWriter();
     rdataWriter.writeUint16(priority);
     rdataWriter.writeUint16(weight);
     rdataWriter.writeUint16(port);
     _writeDomainName(rdataWriter, target);
     final rdataBytes = rdataWriter.toBytes();
-    
+
     writer.writeUint16(rdataBytes.length);
     writer.writeBytes(rdataBytes);
   }
@@ -583,15 +588,21 @@ class SRVRecord extends DNSResourceRecord {
     return writer.toBytes();
   }
 
-  static SRVRecord? parseRData(ByteDataReader reader, String name, int dnsClass, int ttl, int rdLength) {
+  static SRVRecord? parseRData(
+    ByteDataReader reader,
+    String name,
+    int dnsClass,
+    int ttl,
+    int rdLength,
+  ) {
     if (rdLength < 6) return null;
-    
+
     final priority = reader.readUint16();
     final weight = reader.readUint16();
     final port = reader.readUint16();
     final target = _readDomainName(reader);
     if (target == null) return null;
-    
+
     return SRVRecord(
       name: name,
       priority: priority,
@@ -621,7 +632,7 @@ class TXTRecord extends DNSResourceRecord {
     writer.writeUint16(type);
     writer.writeUint16(dnsClass);
     writer.writeUint32(ttl);
-    
+
     final rdataWriter = ByteDataWriter();
     for (final str in strings) {
       final bytes = str.codeUnits;
@@ -631,7 +642,7 @@ class TXTRecord extends DNSResourceRecord {
       }
     }
     final rdataBytes = rdataWriter.toBytes();
-    
+
     writer.writeUint16(rdataBytes.length);
     writer.writeBytes(rdataBytes);
   }
@@ -649,18 +660,24 @@ class TXTRecord extends DNSResourceRecord {
     return writer.toBytes();
   }
 
-  static TXTRecord? parseRData(ByteDataReader reader, String name, int dnsClass, int ttl, int rdLength) {
+  static TXTRecord? parseRData(
+    ByteDataReader reader,
+    String name,
+    int dnsClass,
+    int ttl,
+    int rdLength,
+  ) {
     final strings = <String>[];
     final endOffset = reader.offset + rdLength;
-    
+
     while (reader.offset < endOffset) {
       final length = reader.readUint8();
       if (reader.offset + length > endOffset) break;
-      
+
       final bytes = reader.readBytes(length);
       strings.add(String.fromCharCodes(bytes));
     }
-    
+
     return TXTRecord(
       name: name,
       strings: strings,
@@ -669,7 +686,6 @@ class TXTRecord extends DNSResourceRecord {
     );
   }
 }
-
 
 /// NSEC record (Next Secure)
 class NSECRecord extends DNSResourceRecord {
@@ -690,34 +706,34 @@ class NSECRecord extends DNSResourceRecord {
     writer.writeUint16(type);
     writer.writeUint16(dnsClass);
     writer.writeUint32(ttl);
-    
+
     final rdataWriter = ByteDataWriter();
     _writeDomainName(rdataWriter, nextDomainName);
-    
+
     // Write bitmap
     final maxType = types.reduce((a, b) => a > b ? a : b);
     final windowCount = (maxType >> 8) + 1;
-    
+
     for (var window = 0; window < windowCount; window++) {
       final windowTypes = types.where((t) => (t >> 8) == window).toList();
       if (windowTypes.isEmpty) continue;
-      
+
       final maxByte = (windowTypes.reduce((a, b) => a > b ? a : b) & 0xFF) >> 3;
       final bitmap = List<int>.filled(maxByte + 1, 0);
-      
+
       for (final type in windowTypes) {
         final byteOffset = (type & 0xFF) >> 3;
         final bitOffset = type & 0x7;
         bitmap[byteOffset] |= (1 << (7 - bitOffset));
       }
-      
+
       rdataWriter.writeUint8(window);
       rdataWriter.writeUint8(bitmap.length);
       for (final byte in bitmap) {
         rdataWriter.writeUint8(byte);
       }
     }
-    
+
     final rdataBytes = rdataWriter.toBytes();
     writer.writeUint16(rdataBytes.length);
     writer.writeBytes(rdataBytes);
@@ -727,49 +743,55 @@ class NSECRecord extends DNSResourceRecord {
   Uint8List get rdata {
     final writer = ByteDataWriter();
     _writeDomainName(writer, nextDomainName);
-    
+
     // Write bitmap using same logic as writeTo
     final maxType = types.reduce((a, b) => a > b ? a : b);
     final windowCount = (maxType >> 8) + 1;
-    
+
     for (var window = 0; window < windowCount; window++) {
       final windowTypes = types.where((t) => (t >> 8) == window).toList();
       if (windowTypes.isEmpty) continue;
-      
+
       final maxByte = (windowTypes.reduce((a, b) => a > b ? a : b) & 0xFF) >> 3;
       final bitmap = List<int>.filled(maxByte + 1, 0);
-      
+
       for (final type in windowTypes) {
         final byteOffset = (type & 0xFF) >> 3;
         final bitOffset = type & 0x7;
         bitmap[byteOffset] |= (1 << (7 - bitOffset));
       }
-      
+
       writer.writeUint8(window);
       writer.writeUint8(bitmap.length);
       for (final byte in bitmap) {
         writer.writeUint8(byte);
       }
     }
-    
+
     return writer.toBytes();
   }
 
-  static NSECRecord? parseRData(ByteDataReader reader, String name, int dnsClass, int ttl, int rdLength) {
+  static NSECRecord? parseRData(
+    ByteDataReader reader,
+    String name,
+    int dnsClass,
+    int ttl,
+    int rdLength,
+  ) {
     final startOffset = reader.offset;
-    
+
     final nextDomainName = _readDomainName(reader);
     if (nextDomainName == null) return null;
-    
+
     final types = <int>[];
     while (reader.offset < startOffset + rdLength) {
       if (reader.remainingLength < 2) return null;
-      
+
       final window = reader.readUint8();
       final bitmapLength = reader.readUint8();
-      
+
       if (reader.remainingLength < bitmapLength) return null;
-      
+
       for (var i = 0; i < bitmapLength; i++) {
         final byte = reader.readUint8();
         for (var bit = 0; bit < 8; bit++) {
@@ -779,7 +801,7 @@ class NSECRecord extends DNSResourceRecord {
         }
       }
     }
-    
+
     return NSECRecord(
       name: name,
       nextDomainName: nextDomainName,
@@ -794,7 +816,7 @@ class NSECRecord extends DNSResourceRecord {
 
 void _writeDomainName(ByteDataWriter writer, String name) {
   final labels = name.split('.');
-  
+
   for (final label in labels) {
     if (label.isNotEmpty) {
       writer.writeUint8(label.length);
@@ -811,10 +833,10 @@ String? _readDomainName(ByteDataReader reader) {
   final visitedOffsets = <int>{};
   bool jumped = false;
   int? returnOffset;
-  
+
   while (reader.remainingLength > 0) {
     final length = reader.readUint8();
-    
+
     if (length == 0) {
       // End of name
       if (jumped && returnOffset != null) {
@@ -824,29 +846,29 @@ String? _readDomainName(ByteDataReader reader) {
     } else if ((length & 0xC0) == 0xC0) {
       // Pointer
       if (reader.remainingLength < 1) return null;
-      
+
       final pointer = ((length & 0x3F) << 8) | reader.readUint8();
-      
+
       if (visitedOffsets.contains(pointer)) {
         return null; // Infinite loop
       }
       visitedOffsets.add(pointer);
-      
+
       if (!jumped) {
         returnOffset = reader.offset;
         jumped = true;
       }
-      
+
       reader.seek(pointer);
     } else {
       // Regular label
       if (reader.remainingLength < length) return null;
-      
+
       final labelBytes = reader.readBytes(length);
       labels.add(String.fromCharCodes(labelBytes));
     }
   }
-  
+
   return null;
 }
 
@@ -909,10 +931,11 @@ class ByteDataReader {
 
   int readUint32() {
     if (_offset + 3 >= _data.length) throw RangeError('Buffer underflow');
-    final value = (_data[_offset] << 24) |
-                  (_data[_offset + 1] << 16) |
-                  (_data[_offset + 2] << 8) |
-                  _data[_offset + 3];
+    final value =
+        (_data[_offset] << 24) |
+        (_data[_offset + 1] << 16) |
+        (_data[_offset + 2] << 8) |
+        _data[_offset + 3];
     _offset += 4;
     return value;
   }

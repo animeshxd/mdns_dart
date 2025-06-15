@@ -41,7 +41,7 @@ void main() async {
   try {
     await server.start();
     print('Server started - advertising service!');
-    
+
     await Future.delayed(Duration(seconds: 30));
   } finally {
     await server.stop();
