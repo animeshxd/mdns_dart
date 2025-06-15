@@ -790,13 +790,14 @@ class _Client {
     final data = query.pack();
     _log('Sending ${data.length} byte DNS query packet');
 
-    int sentCount = 0;
+    bool ipv4Error = true;
+    bool ipv6Error = true;
 
     if (_ipv4UnicastConn != null) {
       try {
         _ipv4UnicastConn!.send(data, InternetAddress(ipv4mDNS), mDNSPort);
-        sentCount++;
         _log('Sent query via IPv4 unicast to $ipv4mDNS:$mDNSPort');
+        ipv4Error = false;
       } catch (e) {
         _log('Failed to send query via IPv4 unicast: $e');
       }
@@ -805,14 +806,27 @@ class _Client {
     if (_ipv6UnicastConn != null) {
       try {
         _ipv6UnicastConn!.send(data, InternetAddress(ipv6mDNS), mDNSPort);
-        sentCount++;
         _log('Sent query via IPv6 unicast to $ipv6mDNS:$mDNSPort');
+        ipv6Error = false;
       } catch (e) {
         _log('Failed to send query via IPv6 unicast: $e');
       }
     }
 
-    _log('Query sent successfully on $sentCount connection(s)');
+    if (ipv4Error && ipv6Error) {
+      _log('Failed to send query on both IPv4 and IPv6 connections');
+      throw StateError(
+        'Failed to send mDNS query on both IPv4 and IPv6 connections',
+      );
+    }
+
+    if (!ipv4Error && !ipv6Error) {
+      _log('Query sent successfully on both IPv4 and IPv6 connections');
+    } else if (!ipv4Error) {
+      _log('Query sent successfully on IPv4 connection only');
+    } else if (!ipv6Error) {
+      _log('Query sent successfully on IPv6 connection only');
+    }
   }
 
   /// Ensures an entry exists in the progress map
