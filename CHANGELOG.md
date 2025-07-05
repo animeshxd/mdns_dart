@@ -1,3 +1,8 @@
+## 1.1.1
+- Reformatted all code for improved consistency and readability.
+- Enhanced error handling and logging for mDNS query sending over IPv4 and IPv6
+- `_sendQuery` now throws a `StateError` if mDNS query sending fails for both IPv4 and IPv6.
+
 ## 1.1.0
 
 - Added support for multiple addresses in a `ServiceEntry`
