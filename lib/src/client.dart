@@ -148,6 +148,9 @@ class QueryParams {
   ///
   /// This allows multiple processes to bind to the same multicast address and port.
   /// Supported on Linux, macOS, and Android API 21+.
+  /// 
+  /// Note for Android: If you encounter binding issues with reusePort=true,
+  /// try setting reusePort=false and handle socket conflicts manually.
   final bool reusePort;
 
   /// Whether to use SO_REUSEADDR socket option for multicast sockets
