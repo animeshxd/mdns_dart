@@ -2,8 +2,10 @@ library;
 
 import 'dart:io';
 
-/// Helper function to set the multicast interface
 extension RawDatagramSocketExtensions on RawDatagramSocket {
+  /// Helper function to set the multicast interface.
+  /// 
+  /// Throws a [OSError] on failure.
   void setMulticastInterface(NetworkInterface iface) {
     final level = address.type == InternetAddressType.IPv4
         ? RawSocketOption.levelIPv4
