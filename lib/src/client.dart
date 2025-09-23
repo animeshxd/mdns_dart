@@ -237,6 +237,10 @@ class MDNSClient {
   }
 
   /// Discovers services and collects results into a list
+  /// 
+  /// Wrapper around [query] that collects all results into a list
+  /// and returns them after the timeout. 
+  /// See [query] and [QueryParams] for details.
   static Future<List<ServiceEntry>> discover(
     String service, {
     Duration timeout = const Duration(seconds: 3),
@@ -248,9 +252,6 @@ class MDNSClient {
     int multicastHops = 1,
     void Function(String message)? logger,
   }) async {
-    final results = <ServiceEntry>[];
-    final completer = Completer<List<ServiceEntry>>();
-
     final params = QueryParams(
       service: service,
       domain: domain,
@@ -265,33 +266,8 @@ class MDNSClient {
 
     try {
       final stream = await query(params);
-      late StreamSubscription subscription;
-
-      subscription = stream.listen(
-        (entry) {
-          results.add(entry);
-        },
-        onDone: () {
-          completer.complete(results);
-        },
-        onError: (error) {
-          completer.completeError(error);
-        },
-      );
-
-      // Set up timeout
-      Timer(timeout, () {
-        subscription.cancel();
-        if (!completer.isCompleted) {
-          completer.complete(results);
-        }
-      });
-
-      return await completer.future;
+      return stream.toList();
     } catch (e) {
-      if (!completer.isCompleted) {
-        completer.completeError(e);
-      }
       rethrow;
     }
   }
