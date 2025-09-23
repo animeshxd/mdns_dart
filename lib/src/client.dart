@@ -252,12 +252,8 @@ class MDNSClient {
       logger: logger,
     );
 
-    try {
-      final stream = await query(params);
-      return stream.toList();
-    } catch (e) {
-      rethrow;
-    }
+    final stream = await query(params);
+    return stream.toList();
   }
 }
 
