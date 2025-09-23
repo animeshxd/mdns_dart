@@ -132,9 +132,6 @@ class QueryParams {
   /// Network interface to use for multicast
   final NetworkInterface? networkInterface;
 
-  /// Stream for discovered entries
-  final StreamController<ServiceEntry>? entriesController;
-
   /// Whether to request unicast responses
   final bool wantUnicastResponse;
 
@@ -177,7 +174,6 @@ class QueryParams {
     this.domain = 'local',
     this.timeout = const Duration(seconds: 1),
     this.networkInterface,
-    this.entriesController,
     this.wantUnicastResponse = false,
     this.disableIPv4 = false,
     this.disableIPv6 = false,
@@ -191,14 +187,6 @@ class QueryParams {
   factory QueryParams.defaultFor(String service) {
     return QueryParams(
       service: service,
-      domain: 'local',
-      timeout: const Duration(seconds: 1),
-      wantUnicastResponse: false,
-      disableIPv4: false,
-      disableIPv6: false,
-      reusePort: true,
-      reuseAddress: true,
-      multicastHops: 1,
     );
   }
 }
