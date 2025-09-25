@@ -1,3 +1,8 @@
+## 2.0.1
+- Refactored `_createResponse` from `MDNSServer` to use `DNSFlags` constants for clarity.
+- Improved documentation for `QueryParams.service` parameter to clarify expected format.
+- Reformatted all code for improved consistency and readability.
+
 ## 2.0.0
 - Changed the default value of `reusePort` to `false`. Implementations that require port reuse must now explicitly set `reusePort: true`. ([#6](https://github.com/animeshxd/mdns_dart/issues/6))
 - Lowered minimum Dart SDK constraint to `^3.0.0` for wider compatibility. ([#5](https://github.com/animeshxd/mdns_dart/issues/5))
