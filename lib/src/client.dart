@@ -145,7 +145,7 @@ class QueryParams {
   ///
   /// This allows multiple processes to bind to the same multicast address and port.
   /// Supported on Linux, macOS, and Android API 21+.
-  /// 
+  ///
   /// Note for Android: If you encounter binding issues with reusePort=true,
   /// try setting reusePort=false and handle socket conflicts manually.
   final bool reusePort;
@@ -225,9 +225,9 @@ class MDNSClient {
   }
 
   /// Discovers services and collects results into a list
-  /// 
+  ///
   /// Wrapper around [query] that collects all results into a list
-  /// and returns them after the timeout. 
+  /// and returns them after the timeout.
   /// See [query] and [QueryParams] for details.
   static Future<List<ServiceEntry>> discover(
     String service, {
@@ -281,12 +281,12 @@ class _Client {
     required bool reuseAddress,
     required int multicastHops,
     void Function(String message)? logger,
-  }) : _useIPv4 = useIPv4,
-       _useIPv6 = useIPv6,
-       _reusePort = reusePort,
-       _reuseAddress = reuseAddress,
-       _multicastHops = multicastHops,
-       _logger = logger {
+  })  : _useIPv4 = useIPv4,
+        _useIPv6 = useIPv6,
+        _reusePort = reusePort,
+        _reuseAddress = reuseAddress,
+        _multicastHops = multicastHops,
+        _logger = logger {
     if (!_useIPv4 && !_useIPv6) {
       throw ArgumentError('Must enable at least one of IPv4 and IPv6');
     }
@@ -871,21 +871,20 @@ class _ServiceMatcher {
   final String _fullServicePattern;
 
   _ServiceMatcher(String service, String domain)
-    : _fullServicePattern = '${_trimDot(service)}.${_trimDot(domain)}.';
+      : _fullServicePattern = '${_trimDot(service)}.${_trimDot(domain)}.';
 
   /// Checks if a service entry name matches the requested service
   bool matches(String serviceName) {
     if (serviceName.isEmpty) return false;
 
     // Normalize the service name
-    final normalizedName = serviceName.endsWith('.')
-        ? serviceName
-        : '$serviceName.';
+    final normalizedName =
+        serviceName.endsWith('.') ? serviceName : '$serviceName.';
 
     // Direct match check
     if (normalizedName.toLowerCase().endsWith(
-      _fullServicePattern.toLowerCase(),
-    )) {
+          _fullServicePattern.toLowerCase(),
+        )) {
       return true;
     }
 

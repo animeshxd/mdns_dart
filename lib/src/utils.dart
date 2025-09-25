@@ -4,7 +4,7 @@ import 'dart:io';
 
 extension RawDatagramSocketExtensions on RawDatagramSocket {
   /// Helper function to set the multicast interface.
-  /// 
+  ///
   /// Throws a [OSError] on failure.
   void setMulticastInterface(NetworkInterface iface) {
     final level = address.type == InternetAddressType.IPv4
@@ -14,9 +14,7 @@ extension RawDatagramSocketExtensions on RawDatagramSocket {
         ? RawSocketOption.IPv4MulticastInterface
         : RawSocketOption.IPv6MulticastInterface;
 
-    iface.addresses
-        .where((addr) => addr.type == address.type)
-        .forEach(
+    iface.addresses.where((addr) => addr.type == address.type).forEach(
           (addr) =>
               setRawOption(RawSocketOption(level, option, addr.rawAddress)),
         );

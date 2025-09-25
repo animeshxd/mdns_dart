@@ -142,9 +142,8 @@ class MDNSService implements Zone {
   @override
   List<DNSResourceRecord> records(DNSQuestion question) {
     // Normalize query name to FQDN format (with trailing dot)
-    final queryName = question.name.endsWith('.')
-        ? question.name
-        : '${question.name}.';
+    final queryName =
+        question.name.endsWith('.') ? question.name : '${question.name}.';
 
     switch (queryName) {
       case String name when name == enumAddr:

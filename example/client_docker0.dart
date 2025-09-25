@@ -7,9 +7,8 @@ void main() async {
 
   // Find the 'docker0' network interface
   final interfaces = await NetworkInterface.list();
-  final targetInterface = interfaces
-      .where((i) => i.name == 'docker0')
-      .firstOrNull;
+  final targetInterface =
+      interfaces.where((i) => i.name == 'docker0').firstOrNull;
 
   if (targetInterface == null) {
     print('docker0 interface not found');

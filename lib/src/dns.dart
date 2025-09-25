@@ -931,8 +931,7 @@ class ByteDataReader {
 
   int readUint32() {
     if (_offset + 3 >= _data.length) throw RangeError('Buffer underflow');
-    final value =
-        (_data[_offset] << 24) |
+    final value = (_data[_offset] << 24) |
         (_data[_offset + 1] << 16) |
         (_data[_offset + 2] << 8) |
         _data[_offset + 3];
