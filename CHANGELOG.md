@@ -1,3 +1,12 @@
+## 2.0.0
+- Changed the default value of `reusePort` to `false`. Implementations that require port reuse must now explicitly set `reusePort: true`. ([#6](https://github.com/animeshxd/mdns_dart/issues/6))
+- Lowered minimum Dart SDK constraint to `^3.0.0` for wider compatibility. ([#5](https://github.com/animeshxd/mdns_dart/issues/5))
+- Significantly simplified the `discover` method by removing redundant timeout, result, and error handling logic.
+- Removed the unused `entriesController` property from `QueryParams`.
+- Cleaned up the `QueryParams.defaultFor` factory to remove redundant default values.
+- Fixed incorrect placement of the documentation for the `setMulticastInterface` extension method.
+- Added a note to `QueryParams.reusePort` regarding potential socket binding issues on Android.
+
 ## 1.1.1
 - Reformatted all code for improved consistency and readability.
 - Enhanced error handling and logging for mDNS query sending over IPv4 and IPv6
