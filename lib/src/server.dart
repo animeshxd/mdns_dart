@@ -313,8 +313,8 @@ class MDNSServer {
   ) {
     // Build flags with proper bit manipulation
     int flags = 0;
-    flags |= 0x8000; // QR bit: Response
-    flags |= 0x0400; // AA bit: Authoritative Answer
+    flags |= DNSFlags.QR; // QR bit: Response
+    flags |= DNSFlags.AA; // AA bit: Authoritative Answer
     // Other flags remain 0 (not truncated, no recursion, etc.)
 
     return DNSMessage(
