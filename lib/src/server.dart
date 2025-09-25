@@ -49,7 +49,7 @@ class MDNSServerConfig {
     this.networkInterface,
     this.logEmptyResponses = false,
     this.logger,
-    this.reusePort = true,
+    this.reusePort = false,
     this.reuseAddress = true,
     this.multicastHops = 1,
   });
