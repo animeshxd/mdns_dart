@@ -120,7 +120,7 @@ class ServiceEntry {
 
 /// Parameters for customizing mDNS queries
 class QueryParams {
-  /// Service to lookup (e.g., "_http._tcp.local")
+  /// Service to lookup (e.g., "_http._tcp")
   final String service;
 
   /// Lookup domain (default: "local")
