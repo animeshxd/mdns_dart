@@ -1,3 +1,12 @@
+## 2.2.0
+- Added simple integration tests to verify full client-to-server discovery workflows.
+- Added unit tests for DNS message parsing.
+- Added unit tests for `QuerySession`, `MDNSService`, `MDNSService.create` and `MDNSService.records`.
+- Added unit tests for `trimDot` and `isValidFQDN` utility functions.
+- Extracted mDNS query record assembly and state management logic into a new `QuerySession` class.
+- Refactored `trimDot` and `isValidFQDN` helpers to `src/utils.dart` and made them public.
+- Updated `ServiceEntry.addrV4` and `ServiceEntry.addrV6` to use `firstOrNull` for `Bad State: No element` error.
+
 ## 2.1.0
 - Added note on client_docker0.dart example about unicast responses in Docker environments.
 - Added missing logic to bind the IPv6 unicast socket to the interface's specific IP address.
