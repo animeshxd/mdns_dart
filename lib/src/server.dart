@@ -371,8 +371,6 @@ class MDNSServer {
     final logger = _config.logger;
     if (logger != null) {
       logger('[mDNS Server] $message');
-    } else {
-      print('[mDNS Server] $message');
     }
   }
 
