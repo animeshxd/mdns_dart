@@ -476,8 +476,7 @@ class _Client {
     if (_closed) throw StateError('Client is closed');
 
     // Create service address
-    final serviceAddr =
-        '${_trimDot(params.service)}.${_trimDot(params.domain)}.';
+    final serviceAddr = '${trimDot(params.service)}.${trimDot(params.domain)}.';
     _log(
       'Starting query for service: $serviceAddr (timeout: ${params.timeout})',
     );
@@ -845,7 +844,7 @@ class _ServiceMatcher {
   final String _fullServicePattern;
 
   _ServiceMatcher(String service, String domain)
-      : _fullServicePattern = '${_trimDot(service)}.${_trimDot(domain)}.';
+      : _fullServicePattern = '${trimDot(service)}.${trimDot(domain)}.';
 
   /// Checks if a service entry name matches the requested service
   bool matches(String serviceName) {
@@ -875,9 +874,4 @@ class _ServiceMatcher {
 
     return false;
   }
-}
-
-/// Trims dots from start and end of string
-String _trimDot(String s) {
-  return s.replaceAll(RegExp(r'^\.+|\.+$'), '');
 }
