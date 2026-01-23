@@ -87,7 +87,7 @@ void main() {
       expect(results, isEmpty);
     });
 
-    // The server should handle conflicting instance names. 
+    // The server should handle conflicting instance names.
     test('merges IPs when service instance host changes', () {
       final session = QuerySession(service: '_http._tcp');
 
