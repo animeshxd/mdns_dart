@@ -60,12 +60,12 @@ class ServiceEntry {
 
   /// IPv4 address (backward compatibility - returns first address)
   InternetAddress? get addrV4 {
-    return addrsV4?.first;
+    return addrsV4?.firstOrNull;
   }
 
   /// IPv6 address (backward compatibility - returns first address)
   InternetAddress? get addrV6 {
-    return addrsV6?.first;
+    return addrsV6?.firstOrNull;
   }
 
   /// Gets the primary IP address (prefers IPv4)
@@ -476,14 +476,10 @@ class _Client {
     if (_closed) throw StateError('Client is closed');
 
     // Create service address
-    final serviceAddr =
-        '${_trimDot(params.service)}.${_trimDot(params.domain)}.';
+    final serviceAddr = '${trimDot(params.service)}.${trimDot(params.domain)}.';
     _log(
       'Starting query for service: $serviceAddr (timeout: ${params.timeout})',
     );
-
-    // Create service matcher for filtering results
-    final serviceMatcher = _ServiceMatcher(params.service, params.domain);
 
     // Create message channel for received packets
     final messageController = StreamController<_MessageAddr>();
@@ -536,9 +532,12 @@ class _Client {
       await _sendQuery(query);
       _log('Query sent to mDNS multicast addresses');
 
-      // Track in-progress responses
-      final inProgress = <String, ServiceEntry>{};
-      final completedServices = <String>{};
+      // Create session to track progress
+      final session = QuerySession(
+        service: params.service,
+        domain: params.domain,
+        logger: _log,
+      );
 
       // Set up timeout
       if (params.timeout != Duration.zero) {
@@ -557,6 +556,8 @@ class _Client {
 
       // Listen for responses until timeout
       int receivedPackets = 0;
+      int foundServices = 0;
+
       await for (final msgAddr in messageController.stream) {
         receivedPackets++;
         _log(
@@ -568,105 +569,15 @@ class _Client {
           ...msgAddr.message.additional,
         ];
 
-        for (final record in records) {
-          final entry = _ensureEntry(inProgress, record.name);
-          entry.host = entry.host.isEmpty ? record.name : entry.host;
-
-          switch (record) {
-            case PTRRecord ptr:
-              _log('Processing PTR record: ${ptr.name} -> ${ptr.target}');
-              final targetEntry = _ensureEntry(inProgress, ptr.target);
-              targetEntry.name = ptr.target;
-              _alias(inProgress, ptr.target, ptr.name);
-              break;
-
-            case SRVRecord srv:
-              _log(
-                'Processing SRV record: ${srv.name} -> ${srv.target}:${srv.port} (priority: ${srv.priority}, weight: ${srv.weight})',
-              );
-              entry.host = srv.target;
-              entry.port = srv.port;
-              break;
-
-            case ARecord a:
-              _log('Processing A record: ${a.name} -> ${a.address}');
-              final ipv4Address = InternetAddress(a.address);
-              entry.addIPv4Address(ipv4Address);
-
-              // Propagate A record to all entries that reference this host
-              for (final otherEntry in inProgress.values) {
-                if (otherEntry.host == a.name && otherEntry != entry) {
-                  otherEntry.addIPv4Address(ipv4Address);
-                }
-              }
-              break;
-
-            case AAAARecord aaaa:
-              _log('Processing AAAA record: ${aaaa.name} -> ${aaaa.address}');
-              final ipv6Address = InternetAddress(aaaa.address);
-              entry.addIPv6Address(ipv6Address);
-
-              // Propagate AAAA record to all entries that reference this host
-              for (final otherEntry in inProgress.values) {
-                if (otherEntry.host == aaaa.name && otherEntry != entry) {
-                  otherEntry.addIPv6Address(ipv6Address);
-                }
-              }
-              break;
-
-            case TXTRecord txt:
-              _log(
-                'Processing TXT record: ${txt.name} with ${txt.strings.length} text fields',
-              );
-              entry.infoFields = txt.strings;
-              entry.info = txt.strings.isNotEmpty ? txt.strings.first : '';
-              entry.markHasTXT();
-              break;
-
-            case NSECRecord _:
-              _log(
-                'Ignoring NSEC record for ${record.name} (used for negative responses)',
-              );
-              break;
-
-            default:
-              _log(
-                'Ignoring unknown record type: ${record.runtimeType} for ${record.name}',
-              );
-          }
-
-          // Check if entry is complete and hasn't been sent
-          if (entry.isComplete &&
-              !entry.wasSent &&
-              !completedServices.contains(entry.name) &&
-              serviceMatcher.matches(entry.name)) {
-            _log(
-              'Service entry complete and matches query: ${entry.name} at ${entry.allAddresses.map((a) => a.address).join(', ')}:${entry.port}',
-            );
-            entry.markSent();
-            completedServices.add(entry.name);
-            yield entry;
-          }
-
-          // Also check all other entries for completeness after linking
-          for (final otherEntry in inProgress.values) {
-            if (otherEntry.isComplete &&
-                !otherEntry.wasSent &&
-                !completedServices.contains(otherEntry.name) &&
-                serviceMatcher.matches(otherEntry.name)) {
-              _log(
-                'Linked service entry complete and matches query: ${otherEntry.name} at ${otherEntry.allAddresses.map((a) => a.address).join(', ')}:${otherEntry.port}',
-              );
-              otherEntry.markSent();
-              completedServices.add(otherEntry.name);
-              yield otherEntry;
-            }
-          }
+        final results = session.addRecords(records);
+        for (final result in results) {
+          foundServices++;
+          yield result;
         }
       }
 
       _log(
-        'Query completed. Total packets received: $receivedPackets, services found: ${completedServices.length}',
+        'Query completed. Total packets received: $receivedPackets, services found: $foundServices',
       );
     } finally {
       // Cancel timeout timer if it exists
@@ -766,17 +677,6 @@ class _Client {
     }
   }
 
-  /// Ensures an entry exists in the progress map
-  ServiceEntry _ensureEntry(Map<String, ServiceEntry> inProgress, String name) {
-    return inProgress.putIfAbsent(name, () => ServiceEntry(name: name));
-  }
-
-  /// Sets up an alias between two entries
-  void _alias(Map<String, ServiceEntry> inProgress, String src, String dst) {
-    final srcEntry = _ensureEntry(inProgress, src);
-    inProgress[dst] = srcEntry;
-  }
-
   /// Closes the client and all connections
   Future<void> close() async {
     if (_closed) {
@@ -845,7 +745,7 @@ class _ServiceMatcher {
   final String _fullServicePattern;
 
   _ServiceMatcher(String service, String domain)
-      : _fullServicePattern = '${_trimDot(service)}.${_trimDot(domain)}.';
+      : _fullServicePattern = '${trimDot(service)}.${trimDot(domain)}.';
 
   /// Checks if a service entry name matches the requested service
   bool matches(String serviceName) {
@@ -877,7 +777,123 @@ class _ServiceMatcher {
   }
 }
 
-/// Trims dots from start and end of string
-String _trimDot(String s) {
-  return s.replaceAll(RegExp(r'^\.+|\.+$'), '');
+/// Manages the state of an mDNS query session, stitching together fragmented records.
+class QuerySession {
+  final _ServiceMatcher _matcher;
+  final Map<String, ServiceEntry> _inProgress = {};
+  final Set<String> _completedServices = {};
+  final void Function(String message)? _logger;
+
+  QuerySession({
+    required String service,
+    String domain = 'local',
+    void Function(String message)? logger,
+  })  : _matcher = _ServiceMatcher(service, domain),
+        _logger = logger;
+
+  /// Processes a list of records and returns any newly completed service entries.
+  List<ServiceEntry> addRecords(List<DNSResourceRecord> records) {
+    final newResults = <ServiceEntry>[];
+
+    for (final record in records) {
+      final entry = _ensureEntry(record.name);
+      entry.host = entry.host.isEmpty ? record.name : entry.host;
+
+      switch (record) {
+        case PTRRecord ptr:
+          _log('Processing PTR record: ${ptr.name} -> ${ptr.target}');
+          final targetEntry = _ensureEntry(ptr.target);
+          targetEntry.name = ptr.target;
+          _alias(ptr.target, ptr.name);
+          break;
+
+        case SRVRecord srv:
+          _log(
+            'Processing SRV record: ${srv.name} -> ${srv.target}:${srv.port} (priority: ${srv.priority}, weight: ${srv.weight})',
+          );
+          entry.host = srv.target;
+          entry.port = srv.port;
+          break;
+
+        case ARecord a:
+          _log('Processing A record: ${a.name} -> ${a.address}');
+          final ipv4Address = InternetAddress(a.address);
+          entry.addIPv4Address(ipv4Address);
+
+          // Propagate A record to all entries that reference this host
+          for (final otherEntry in _inProgress.values) {
+            if (otherEntry.host == a.name && otherEntry != entry) {
+              otherEntry.addIPv4Address(ipv4Address);
+            }
+          }
+          break;
+
+        case AAAARecord aaaa:
+          _log('Processing AAAA record: ${aaaa.name} -> ${aaaa.address}');
+          final ipv6Address = InternetAddress(aaaa.address);
+          entry.addIPv6Address(ipv6Address);
+
+          // Propagate AAAA record to all entries that reference this host
+          for (final otherEntry in _inProgress.values) {
+            if (otherEntry.host == aaaa.name && otherEntry != entry) {
+              otherEntry.addIPv6Address(ipv6Address);
+            }
+          }
+          break;
+
+        case TXTRecord txt:
+          _log(
+            'Processing TXT record: ${txt.name} with ${txt.strings.length} text fields',
+          );
+          entry.infoFields = txt.strings;
+          entry.info = txt.strings.isNotEmpty ? txt.strings.first : '';
+          entry.markHasTXT();
+          break;
+
+        default:
+          // Ignore other records
+          break;
+      }
+
+      // Check if entry is complete and hasn't been sent
+      if (_checkCompletion(entry, newResults)) {
+        continue;
+      }
+
+      // Also check all other entries for completeness after linking
+      for (final otherEntry in _inProgress.values) {
+        _checkCompletion(otherEntry, newResults);
+      }
+    }
+    return newResults;
+  }
+
+  bool _checkCompletion(ServiceEntry entry, List<ServiceEntry> results) {
+    if (entry.isComplete &&
+        !entry.wasSent &&
+        !_completedServices.contains(entry.name) &&
+        _matcher.matches(entry.name)) {
+      _log(
+        'Service entry complete and matches query: ${entry.name} at ${entry.allAddresses.map((a) => a.address).join(', ')}:${entry.port}',
+      );
+      entry.markSent();
+      _completedServices.add(entry.name);
+      results.add(entry);
+      return true;
+    }
+    return false;
+  }
+
+  ServiceEntry _ensureEntry(String name) {
+    return _inProgress.putIfAbsent(name, () => ServiceEntry(name: name));
+  }
+
+  void _alias(String src, String dst) {
+    final srcEntry = _ensureEntry(src);
+    _inProgress[dst] = srcEntry;
+  }
+
+  void _log(String message) {
+    _logger?.call('[QuerySession] $message');
+  }
 }

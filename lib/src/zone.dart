@@ -6,6 +6,7 @@ library;
 
 import 'dart:io';
 import 'dns.dart';
+import 'utils.dart';
 
 /// Default TTL for mDNS records in seconds
 const int defaultTTL = 120;
@@ -53,9 +54,9 @@ class MDNSService implements Zone {
     required this.ips,
     required this.txt,
   }) {
-    serviceAddr = '${_trimDot(service)}.${_trimDot(domain)}.';
-    instanceAddr = '$instance.${_trimDot(service)}.${_trimDot(domain)}.';
-    enumAddr = '_services._dns-sd._udp.${_trimDot(domain)}.';
+    serviceAddr = '${trimDot(service)}.${trimDot(domain)}.';
+    instanceAddr = '$instance.${trimDot(service)}.${trimDot(domain)}.';
+    enumAddr = '_services._dns-sd._udp.${trimDot(domain)}.';
   }
 
   /// Creates a new MDNSService with automatic host detection
@@ -83,7 +84,7 @@ class MDNSService implements Zone {
     if (!domain.endsWith('.')) {
       domain = '$domain.';
     }
-    if (!_isValidFQDN(domain)) {
+    if (!isValidFQDN(domain)) {
       throw ArgumentError('Domain is not a valid FQDN: $domain');
     }
 
@@ -92,7 +93,7 @@ class MDNSService implements Zone {
     if (!actualHostName.endsWith('.')) {
       actualHostName = '$actualHostName.';
     }
-    if (!_isValidFQDN(actualHostName)) {
+    if (!isValidFQDN(actualHostName)) {
       throw ArgumentError('Hostname is not a valid FQDN: $actualHostName');
     }
 
@@ -383,29 +384,4 @@ class MultiServiceZone implements Zone {
   void clear() {
     _services.clear();
   }
-}
-
-// Helper functions
-
-String _trimDot(String s) {
-  return s.replaceAll(RegExp(r'^\.+|\.+$'), '');
-}
-
-bool _isValidFQDN(String s) {
-  if (s.isEmpty) return false;
-  if (!s.endsWith('.')) return false;
-
-  // Basic validation - could be more comprehensive
-  final labels = s.substring(0, s.length - 1).split('.');
-  if (labels.isEmpty) return false;
-
-  for (final label in labels) {
-    if (label.isEmpty) return false;
-    if (label.length > 63) return false;
-    if (!RegExp(r'^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$').hasMatch(label)) {
-      return false;
-    }
-  }
-
-  return true;
 }
