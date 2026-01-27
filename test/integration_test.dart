@@ -52,6 +52,7 @@ void main() {
       final results = await MDNSClient.discover(
         '_test._tcp',
         timeout: const Duration(seconds: 1),
+        reusePort: true,
       );
 
       expect(results, isNotEmpty,
@@ -74,6 +75,7 @@ void main() {
       final results = await MDNSClient.discover(
         '_nonexistent._tcp',
         timeout: const Duration(seconds: 1),
+        reusePort: true,
       );
 
       expect(results, isEmpty,
