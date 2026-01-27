@@ -81,5 +81,33 @@ void main() {
       expect(results, isEmpty,
           reason: 'No results should be returned for a non-existing service');
     }, timeout: const Timeout(Duration(seconds: 5)));
+
+    test('multiple clients discover same service', () async {
+      if (!server.isRunning) {
+        markTestSkipped('MDNSServer is not running');
+        return;
+      }
+
+      // Start two clients simultaneously
+      final future1 = MDNSClient.discover(
+        '_test._tcp',
+        timeout: const Duration(seconds: 1),
+        reusePort: true,
+      );
+
+      final future2 = MDNSClient.discover(
+        '_test._tcp',
+        timeout: const Duration(seconds: 1),
+        reusePort: true,
+      );
+
+      final results = await Future.wait([future1, future2]);
+
+      expect(results[0], isNotEmpty, reason: 'Client 1 should find service');
+      expect(results[1], isNotEmpty, reason: 'Client 2 should find service');
+
+      expect(results[0].first.name, contains('IntegrationTestService'));
+      expect(results[1].first.name, contains('IntegrationTestService'));
+    }, timeout: const Timeout(Duration(seconds: 5)));
   });
 }
