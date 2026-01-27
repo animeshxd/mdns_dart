@@ -4,6 +4,7 @@
 /// capabilities, supporting all standard DNS record types used in mDNS.
 library;
 
+import 'dart:io';
 import 'dart:typed_data';
 
 /// DNS record types used in mDNS operations
@@ -436,37 +437,25 @@ class AAAARecord extends DNSResourceRecord {
     writer.writeUint32(ttl);
     writer.writeUint16(16); // RDLENGTH
 
-    // Parse IPv6 address and write 16 bytes
-    final parts = address.split(':');
-    final bytes = <int>[];
-
-    // Handle IPv6 address parsing (simplified)
-    for (int i = 0; i < 8; i++) {
-      final part = i < parts.length ? parts[i] : '0';
-      final value = int.parse(part.isEmpty ? '0' : part, radix: 16);
-      bytes.add((value >> 8) & 0xFF);
-      bytes.add(value & 0xFF);
-    }
-
-    for (final byte in bytes) {
-      writer.writeUint8(byte);
-    }
+    writer.writeBytes(rdata);
   }
 
   @override
   Uint8List get rdata {
-    // Simplified IPv6 encoding
-    final parts = address.split(':');
-    final bytes = <int>[];
+    return _parseIPv6Address(address);
+  }
 
-    for (int i = 0; i < 8; i++) {
-      final part = i < parts.length ? parts[i] : '0';
-      final value = int.parse(part.isEmpty ? '0' : part, radix: 16);
-      bytes.add((value >> 8) & 0xFF);
-      bytes.add(value & 0xFF);
-    }
+  Uint8List _parseIPv6Address(String address) {
+    // Robust Fix: Use InternetAddress to parse it. It's available in dart:io.
+    try {
+      final addr = InternetAddress(address);
+      if (addr.type == InternetAddressType.IPv6) {
+        return addr.rawAddress;
+      }
+    } catch (_) {}
 
-    return Uint8List.fromList(bytes);
+    // Fallback for invalid addresses
+    return Uint8List(16);
   }
 
   static AAAARecord? parseRData(

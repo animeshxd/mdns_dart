@@ -157,6 +157,23 @@ void main() {
       expect(aRecord.type, equals(DNSType.A));
     });
 
+    test('ARecord handles boundary IP addresses', () {
+      final addresses = ['0.0.0.0', '255.255.255.255'];
+      for (final addr in addresses) {
+        final original = ARecord(
+          name: 'example.com.',
+          address: addr,
+          ttl: 120,
+        );
+        final writer = ByteDataWriter();
+        original.writeTo(writer);
+        final parsed =
+            DNSResourceRecord.parse(ByteDataReader(writer.toBytes()));
+        expect(parsed, isA<ARecord>());
+        expect((parsed as ARecord).address, equals(addr));
+      }
+    });
+
     test('AAAA Record read/write cycle', () {
       final original = AAAARecord(
         name: 'example.com.',
@@ -176,6 +193,31 @@ void main() {
       expect(aaaaRecord.name, equals('example.com'));
       expect(aaaaRecord.address.toLowerCase(), equals('2001:db8:0:0:0:0:0:1'));
       expect(aaaaRecord.type, equals(DNSType.AAAA));
+    });
+
+    test('AAAARecord handles boundary IP addresses', () {
+      final addresses = {
+        '::': '0:0:0:0:0:0:0:0',
+        '::1': '0:0:0:0:0:0:0:1',
+        'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff':
+            'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'
+      };
+
+      addresses.forEach((input, expected) {
+        final original = AAAARecord(
+          name: 'example.com.',
+          address: input,
+          ttl: 300,
+        );
+        final writer = ByteDataWriter();
+        original.writeTo(writer);
+        final parsed =
+            DNSResourceRecord.parse(ByteDataReader(writer.toBytes()));
+        expect(parsed, isA<AAAARecord>());
+        // Note: AAAARecord parsing normalizes to fully expanded form in current implementation logic
+        // The test expects the normalized form that the parser produces
+        expect((parsed as AAAARecord).address.toLowerCase(), equals(expected));
+      });
     });
 
     test('PTR Record read/write cycle', () {
