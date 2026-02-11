@@ -117,11 +117,6 @@ void main() {
       });
 
       test('validates explicit IP addresses', () async {
-        // Create a fake address with an invalid type if possible,
-        // or just rely on the type check in the code.
-        // Since InternetAddress is final and hard to mock with invalid 'type' property without
-        // hacking, we will trust the type check logic exists.
-        // However, we can test that it accepts valid IPs.
         final service = await MDNSService.create(
           instance: 'Valid IPs',
           service: '_http._tcp',
@@ -130,6 +125,72 @@ void main() {
         );
         expect(service.ips, hasLength(1));
       });
+      test('resolves explicit hostname to loopback addresses', () async {
+        final service = await MDNSService.create(
+          instance: 'Hostname Resolve',
+          service: '_http._tcp',
+          hostName: 'localhost',
+          port: 80,
+        );
+
+        expect(service.ips, isNotEmpty);
+        expect(service.ips.every((ip) => ip.isLoopback), isTrue);
+      });
+
+      test('filters link-local IPv6 when other valid addresses exist',
+          () async {
+        final service = await MDNSService.create(
+          instance: 'Invalid IPs',
+          service: '_http._tcp',
+          port: 80,
+          ips: [
+            InternetAddress('fe80::1'),
+            InternetAddress('127.0.0.1'),
+          ],
+        );
+
+        expect(service.ips, hasLength(1));
+        expect(service.ips.first.isLoopback, isTrue);
+      });
+      test('fails when only link-local addresses are provided', () async {
+        expect(
+          () => MDNSService.create(
+            instance: 'Invalid IPs',
+            service: '_http._tcp',
+            port: 80,
+            ips: [InternetAddress('fe80::1')],
+          ),
+          throwsArgumentError,
+        );
+      });
+
+      test('removes duplicate IP addresses', () async {
+        final service = await MDNSService.create(
+          instance: 'Duplicate IPs',
+          service: '_http._tcp',
+          port: 80,
+          ips: [
+            InternetAddress('127.0.0.1'),
+            InternetAddress('127.0.0.1'),
+          ],
+        );
+
+        expect(service.ips, hasLength(1));
+        expect(service.ips.first.isLoopback, isTrue);
+      });
+
+      test(
+        'throws SocketException when explicit hostname cannot be resolved',
+        () async => expect(
+          () => MDNSService.create(
+            instance: 'Unresolvable Hostname',
+            service: '_http._tcp',
+            hostName: 'nonexistent.local',
+            port: 80,
+          ),
+          throwsA(isA<SocketException>()),
+        ),
+      );
     });
 
     group('Service Enumeration (_serviceEnum)', () {

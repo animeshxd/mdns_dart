@@ -28,7 +28,7 @@ class MDNSService implements Zone {
   /// Domain (defaults to "local.")
   final String domain;
 
-  /// Host machine DNS name (e.g. "mymachine.local.")
+  /// Host machine DNS name (e.g. "mymachine.")
   final String hostName;
 
   /// Service port number
@@ -55,7 +55,7 @@ class MDNSService implements Zone {
     required this.txt,
   }) {
     serviceAddr = '${trimDot(service)}.${trimDot(domain)}.';
-    instanceAddr = '$instance.${trimDot(service)}.${trimDot(domain)}.';
+    instanceAddr = '$instance.$serviceAddr';
     enumAddr = '_services._dns-sd._udp.${trimDot(domain)}.';
   }
 
@@ -73,71 +73,96 @@ class MDNSService implements Zone {
     if (instance.isEmpty) {
       throw ArgumentError('Service instance name cannot be empty');
     }
+
     if (service.isEmpty) {
       throw ArgumentError('Service name cannot be empty');
     }
+
     if (port <= 0 || port > 65535) {
       throw ArgumentError('Invalid port number: $port');
     }
 
-    // Ensure domain ends with dot
-    if (!domain.endsWith('.')) {
-      domain = '$domain.';
-    }
-    if (!isValidFQDN(domain)) {
-      throw ArgumentError('Domain is not a valid FQDN: $domain');
+    final normalizedDomain = domain.endsWith('.') ? domain : '$domain.';
+
+    if (!isValidFQDN(normalizedDomain)) {
+      throw ArgumentError('Domain is not a valid FQDN: $normalizedDomain');
     }
 
-    // Get hostname if not provided
-    String actualHostName = hostName ?? Platform.localHostname;
-    if (!actualHostName.endsWith('.')) {
-      actualHostName = '$actualHostName.';
-    }
-    if (!isValidFQDN(actualHostName)) {
-      throw ArgumentError('Hostname is not a valid FQDN: $actualHostName');
+    final baseHostName = hostName ?? Platform.localHostname;
+    final normalizedHostName =
+        baseHostName.endsWith('.') ? baseHostName : '$baseHostName.';
+
+    if (!isValidFQDN(normalizedHostName)) {
+      throw ArgumentError('Hostname is not a valid FQDN: $normalizedHostName');
     }
 
-    // Get IP addresses if not provided
-    List<InternetAddress> actualIPs = ips ?? [];
-    if (actualIPs.isEmpty) {
-      try {
-        // Try to lookup the hostname
-        actualIPs = await InternetAddress.lookup(
-          actualHostName.substring(0, actualHostName.length - 1),
-        );
-      } catch (e) {
-        // If that fails, try with domain suffix
-        try {
-          final fullHostName =
-              '${actualHostName.substring(0, actualHostName.length - 1)}$domain';
-          actualIPs = await InternetAddress.lookup(
-            fullHostName.substring(0, fullHostName.length - 1),
-          );
-        } catch (e) {
-          throw ArgumentError(
-            'Could not determine IP addresses for $actualHostName',
-          );
-        }
-      }
-    }
+    final resolvedIps = await _resolveIps(
+      explicitIps: ips,
+      explicitHostName: hostName,
+      normalizedHostName: normalizedHostName,
+    );
 
-    // Validate IP addresses
-    for (final ip in actualIPs) {
-      if (ip.type != InternetAddressType.IPv4 &&
-          ip.type != InternetAddressType.IPv6) {
-        throw ArgumentError('Invalid IP address: ${ip.address}');
-      }
+    if (resolvedIps.isEmpty) {
+      throw ArgumentError(
+        'Could not determine usable IP addresses for $normalizedHostName',
+      );
     }
 
     return MDNSService(
       instance: instance,
       service: service,
-      domain: domain,
-      hostName: actualHostName,
+      domain: normalizedDomain,
+      hostName: normalizedHostName,
       port: port,
-      ips: actualIPs,
+      ips: resolvedIps,
       txt: txt,
     );
+  }
+
+  static Future<List<InternetAddress>> _resolveIps({
+    required List<InternetAddress>? explicitIps,
+    required String? explicitHostName,
+    required String normalizedHostName,
+  }) async {
+    if (explicitIps != null && explicitIps.isNotEmpty) {
+      return _sanitizeIps(explicitIps);
+    }
+
+    // If user explicitly provided hostname, resolve once via system DNS.
+    if (explicitHostName != null) {
+      final result = await InternetAddress.lookup(
+        normalizedHostName.substring(0, normalizedHostName.length - 1),
+      );
+      return _sanitizeIps(result);
+    }
+
+    // Otherwise: deterministic interface enumeration.
+    final interfaces = await NetworkInterface.list();
+
+    final addresses = interfaces
+        .expand((iface) => iface.addresses)
+        .where(_isUsableAddress)
+        .toSet() // deduplicate
+        .toList();
+
+    return addresses;
+  }
+
+  static List<InternetAddress> _sanitizeIps(
+    List<InternetAddress> addresses,
+  ) {
+    return addresses.where(_isUsableAddress).toSet().toList();
+  }
+
+  static bool _isUsableAddress(InternetAddress address) {
+    // if (address.isLoopback) return false;
+
+    if (address.type == InternetAddressType.IPv6 && address.isLinkLocal) {
+      return false;
+    }
+
+    return address.type == InternetAddressType.IPv4 ||
+        address.type == InternetAddressType.IPv6;
   }
 
   @override
