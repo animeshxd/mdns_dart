@@ -100,6 +100,7 @@ class MDNSService implements Zone {
       explicitIps: ips,
       explicitHostName: hostName,
       normalizedHostName: normalizedHostName,
+      normalizedDomain: normalizedDomain,
     );
 
     if (resolvedIps.isEmpty) {
@@ -123,6 +124,7 @@ class MDNSService implements Zone {
     required List<InternetAddress>? explicitIps,
     required String? explicitHostName,
     required String normalizedHostName,
+    String normalizedDomain = 'local.',
   }) async {
     if (explicitIps != null && explicitIps.isNotEmpty) {
       return _sanitizeIps(explicitIps);
@@ -130,10 +132,19 @@ class MDNSService implements Zone {
 
     // If user explicitly provided hostname, resolve once via system DNS.
     if (explicitHostName != null) {
-      final result = await InternetAddress.lookup(
-        normalizedHostName.substring(0, normalizedHostName.length - 1),
-      );
-      return _sanitizeIps(result);
+      try {
+        final result = await InternetAddress.lookup(
+          normalizedHostName.substring(0, normalizedHostName.length - 1),
+        );
+        return _sanitizeIps(result);
+      } on Exception catch (_) {
+        // If resolution fails, try hostname + domain as fallback
+        final hostWithDomain = '$normalizedHostName$normalizedDomain';
+        final result = await InternetAddress.lookup(
+          hostWithDomain.substring(0, hostWithDomain.length - 1),
+        );
+        return _sanitizeIps(result);
+      }
     }
 
     // Otherwise: deterministic interface enumeration.
