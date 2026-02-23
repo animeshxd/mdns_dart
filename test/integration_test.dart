@@ -15,7 +15,7 @@ void main() {
         instance: 'IntegrationTestService',
         service: '_test._tcp.',
         domain: 'local.',
-        hostName: 'test-host.local.',
+        hostName: 'test-host.',
         port: 12345,
         ips: [InternetAddress('127.0.0.1')],
         txt: ['version=1.0', 'status=ready'],
