@@ -1,4 +1,6 @@
 ## 2.2.0
+- Refactored `MDNSService.create` to use usable `InternetAddress` from `NetworkInterface` by default. ([#13](https://github.com/animeshxd/mdns_dart/issues/13))
+- Fixed IPv6 serialization for `AAAARecord` to ensure correct formatting in mDNS responses. ([#11](https://github.com/animeshxd/mdns_dart/pull/11))
 - Added simple integration tests to verify full client-to-server discovery workflows.
 - Added unit tests for DNS message parsing.
 - Added unit tests for `QuerySession`, `MDNSService`, `MDNSService.create` and `MDNSService.records`.
@@ -6,6 +8,7 @@
 - Extracted mDNS query record assembly and state management logic into a new `QuerySession` class.
 - Refactored `trimDot` and `isValidFQDN` helpers to `src/utils.dart` and made them public.
 - Updated `ServiceEntry.addrV4` and `ServiceEntry.addrV6` to use `firstOrNull` for `Bad State: No element` error.
+- Removed print as default logging for `MDNSServer` and relied on user-provided logger instead. 
 
 ## 2.1.0
 - Added note on client_docker0.dart example about unicast responses in Docker environments.
