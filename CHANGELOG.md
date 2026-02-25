@@ -1,3 +1,6 @@
+## 2.2.1
+- Refactored `MDNSService.create` to avoid filtering out explicitly provided IP addresses.  
+
 ## 2.2.0
 - Refactored `MDNSService.create` to use usable `InternetAddress` from `NetworkInterface` by default. ([#13](https://github.com/animeshxd/mdns_dart/issues/13))
 - Fixed IPv6 serialization for `AAAARecord` to ensure correct formatting in mDNS responses. ([#11](https://github.com/animeshxd/mdns_dart/pull/11))
