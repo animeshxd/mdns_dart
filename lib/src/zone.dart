@@ -127,7 +127,7 @@ class MDNSService implements Zone {
     String normalizedDomain = 'local.',
   }) async {
     if (explicitIps != null && explicitIps.isNotEmpty) {
-      return _sanitizeIps(explicitIps);
+      return explicitIps.toSet().toList();
     }
 
     // If user explicitly provided hostname, resolve once via system DNS.

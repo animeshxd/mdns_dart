@@ -137,10 +137,10 @@ void main() {
         expect(service.ips.every((ip) => ip.isLoopback), isTrue);
       });
 
-      test('filters link-local IPv6 when other valid addresses exist',
+      test('does not filter link-local IPv6 when explicitly provided',
           () async {
         final service = await MDNSService.create(
-          instance: 'Invalid IPs',
+          instance: 'Explicit IPs',
           service: '_http._tcp',
           port: 80,
           ips: [
@@ -149,19 +149,18 @@ void main() {
           ],
         );
 
-        expect(service.ips, hasLength(1));
-        expect(service.ips.first.isLoopback, isTrue);
+        expect(service.ips, hasLength(2));
       });
-      test('fails when only link-local addresses are provided', () async {
-        expect(
-          () => MDNSService.create(
-            instance: 'Invalid IPs',
-            service: '_http._tcp',
-            port: 80,
-            ips: [InternetAddress('fe80::1')],
-          ),
-          throwsArgumentError,
+      test('succeeds when only link-local addresses are provided explicitly',
+          () async {
+        final service = await MDNSService.create(
+          instance: 'Explicit Link-Local',
+          service: '_http._tcp',
+          port: 80,
+          ips: [InternetAddress('fe80::1')],
         );
+        expect(service.ips, hasLength(1));
+        expect(service.ips.first.isLinkLocal, isTrue);
       });
 
       test('removes duplicate IP addresses', () async {
