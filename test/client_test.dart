@@ -87,8 +87,7 @@ void main() {
       expect(results, isEmpty);
     });
 
-    // The server should handle conflicting instance names.
-    test('merges IPs when service instance host changes', () {
+    test('clears stale IPs when SRV host changes', () {
       final session = QuerySession(service: '_http._tcp');
 
       // 1. Initial discovery of s1 at h1
@@ -116,7 +115,7 @@ void main() {
         contains('1.1.1.1'),
       );
 
-      // 2. Service "moves" to h2 or another server announces s1 at h2
+      // 2. Service "moves" to h2 — old IPs must be cleared
       final records2 = [
         SRVRecord(
           name: 's1._http._tcp.local.',
@@ -129,14 +128,13 @@ void main() {
         ARecord(name: 'h2.local.', address: '2.2.2.2', ttl: 120),
       ];
 
-      // No new emission expected as it was already complete
       session.addRecords(records2);
 
       final entry = results1.first;
       final addresses = entry.allAddresses.map((a) => a.address).toList();
 
-      // Old behavior: IPs are accumulated/merged
-      expect(addresses, contains('1.1.1.1'));
+      // Stale IPs from h1 must be gone, only h2's IP should remain
+      expect(addresses, isNot(contains('1.1.1.1')));
       expect(addresses, contains('2.2.2.2'));
       expect(entry.host, 'h2.local.');
     });

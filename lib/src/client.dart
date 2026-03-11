@@ -811,6 +811,15 @@ class QuerySession {
           _log(
             'Processing SRV record: ${srv.name} -> ${srv.target}:${srv.port} (priority: ${srv.priority}, weight: ${srv.weight})',
           );
+          // Clear stale IPs when the SRV target host changes, as the old
+          // addresses belong to a different host and are no longer valid.
+          if (entry.host != srv.target && entry.allAddresses.isNotEmpty) {
+            _log(
+              'SRV target changed from ${entry.host} to ${srv.target}, clearing stale addresses',
+            );
+            entry.addrsV4 = null;
+            entry.addrsV6 = null;
+          }
           entry.host = srv.target;
           entry.port = srv.port;
           break;
