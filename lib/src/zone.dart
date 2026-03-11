@@ -15,6 +15,10 @@ const int defaultTTL = 120;
 abstract class Zone {
   /// Returns DNS records in response to a DNS question
   List<DNSResourceRecord> records(DNSQuestion question);
+
+  /// Returns all records with TTL=0 for sending goodbye packets
+  /// (RFC 6762 Section 10.1).
+  List<DNSResourceRecord> goodbyeRecords() => [];
 }
 
 /// mDNS service implementation that can serve records for a named service
@@ -358,6 +362,48 @@ class MDNSService implements Zone {
     }
   }
 
+  @override
+  List<DNSResourceRecord> goodbyeRecords() {
+    return [
+      PTRRecord(
+        name: serviceAddr,
+        target: instanceAddr,
+        dnsClass: DNSClass.IN,
+        ttl: 0,
+      ),
+      SRVRecord(
+        name: instanceAddr,
+        priority: 10,
+        weight: 1,
+        port: port,
+        target: hostName,
+        dnsClass: DNSClass.IN,
+        ttl: 0,
+      ),
+      TXTRecord(
+        name: instanceAddr,
+        strings: txt,
+        dnsClass: DNSClass.IN,
+        ttl: 0,
+      ),
+      for (final ip in ips)
+        if (ip.type == InternetAddressType.IPv4)
+          ARecord(
+            name: hostName,
+            address: ip.address,
+            dnsClass: DNSClass.IN,
+            ttl: 0,
+          )
+        else
+          AAAARecord(
+            name: hostName,
+            address: ip.address,
+            dnsClass: DNSClass.IN,
+            ttl: 0,
+          ),
+    ];
+  }
+
   /// Creates TXT record strings from key-value pairs
   static List<String> createTXTRecords(Map<String, String> data) {
     return data.entries.map((entry) => '${entry.key}=${entry.value}').toList();
@@ -414,6 +460,11 @@ class MultiServiceZone implements Zone {
     }
 
     return allRecords;
+  }
+
+  @override
+  List<DNSResourceRecord> goodbyeRecords() {
+    return _services.expand((s) => s.goodbyeRecords()).toList();
   }
 
   /// Clears all services

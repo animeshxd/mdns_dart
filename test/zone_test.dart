@@ -416,6 +416,52 @@ void main() {
       });
     });
 
+    group('Goodbye records', () {
+      test('generates all records with TTL=0', () {
+        final records = service.goodbyeRecords();
+
+        // Should have PTR + SRV + TXT + A + AAAA = 5 records
+        expect(records, hasLength(5));
+
+        // All TTLs must be 0
+        for (final record in records) {
+          expect(record.ttl, equals(0), reason: '${record.runtimeType} TTL');
+        }
+
+        // Verify record types
+        expect(records.whereType<PTRRecord>(), hasLength(1));
+        expect(records.whereType<SRVRecord>(), hasLength(1));
+        expect(records.whereType<TXTRecord>(), hasLength(1));
+        expect(records.whereType<ARecord>(), hasLength(1));
+        expect(records.whereType<AAAARecord>(), hasLength(1));
+      });
+
+      test('MultiServiceZone collects goodbye records from all services', () {
+        final zone = MultiServiceZone();
+        zone.addService(service);
+
+        final service2 = MDNSService(
+          instance: 'Web Server',
+          service: '_http._tcp.',
+          domain: 'local.',
+          hostName: 'web.local.',
+          port: 80,
+          ips: [InternetAddress('10.0.0.1')],
+          txt: ['path=/'],
+        );
+        zone.addService(service2);
+
+        final records = zone.goodbyeRecords();
+
+        // service1: PTR + SRV + TXT + A + AAAA = 5
+        // service2: PTR + SRV + TXT + A = 4
+        expect(records, hasLength(9));
+        for (final record in records) {
+          expect(record.ttl, equals(0));
+        }
+      });
+    });
+
     group('TXT record helpers', () {
       test('createTXTRecords formats correctly', () {
         final map = {'key1': 'val1', 'key2': ''};

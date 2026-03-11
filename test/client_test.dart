@@ -301,5 +301,64 @@ void main() {
       expect(results, hasLength(1));
       expect(results.first.name, 'web._http._tcp.local.');
     });
+
+    test('removes service on goodbye packet (TTL=0)', () {
+      final session = QuerySession(service: '_http._tcp');
+
+      // 1. Discover a service
+      final records = [
+        PTRRecord(
+          name: '_http._tcp.local.',
+          target: 's1._http._tcp.local.',
+          ttl: 120,
+        ),
+        SRVRecord(
+          name: 's1._http._tcp.local.',
+          target: 'h1.local.',
+          port: 80,
+          priority: 0,
+          weight: 0,
+          ttl: 120,
+        ),
+        TXTRecord(name: 's1._http._tcp.local.', strings: [''], ttl: 120),
+        ARecord(name: 'h1.local.', address: '1.1.1.1', ttl: 120),
+      ];
+
+      var results = session.addRecords(records);
+      expect(results, hasLength(1));
+
+      // 2. Re-sending same records should not re-emit (deduplication)
+      results = session.addRecords(records);
+      expect(results, isEmpty);
+
+      // 3. Receive goodbye packet (TTL=0) for the service
+      session.addRecords([
+        PTRRecord(
+          name: '_http._tcp.local.',
+          target: 's1._http._tcp.local.',
+          ttl: 0,
+        ),
+      ]);
+
+      // 4. Service should be re-discoverable after goodbye
+      results = session.addRecords(records);
+      expect(results, hasLength(1));
+      expect(results.first.name, 's1._http._tcp.local.');
+    });
+
+    test('ignores goodbye for unknown service', () {
+      final session = QuerySession(service: '_http._tcp');
+
+      // Goodbye for a service we never discovered — should not throw
+      final results = session.addRecords([
+        PTRRecord(
+          name: '_http._tcp.local.',
+          target: 'unknown._http._tcp.local.',
+          ttl: 0,
+        ),
+      ]);
+
+      expect(results, isEmpty);
+    });
   });
 }
