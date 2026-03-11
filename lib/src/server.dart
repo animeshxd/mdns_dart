@@ -171,10 +171,11 @@ class MDNSServer {
     _log('mDNS server stopped');
   }
 
-  /// Binds a multicast socket with configurable socket options
+  /// Binds a multicast socket with configurable socket options.
   ///
-  /// Throws exceptions on binding failures rather than returning null.
-  /// Users should handle exceptions based on their requirements.
+  /// If binding fails and [reusePort] is `false`, retries with
+  /// `reusePort: true` to handle platforms where the mDNS port is already
+  /// held by a system service (e.g. mDNSResponder on macOS/iOS).
   ///
   /// Note for Android: If you encounter binding issues with reusePort=true,
   /// try setting reusePort=false and handle socket conflicts manually.
@@ -185,16 +186,28 @@ class MDNSServer {
     required bool reuseAddress,
     required int multicastHops,
   }) async {
-    // Try binding with the specified options
-    final socket = await RawDatagramSocket.bind(
-      address,
-      port,
-      reuseAddress: reuseAddress,
-      reusePort: reusePort,
-      ttl: multicastHops,
-    );
+    try {
+      return await RawDatagramSocket.bind(
+        address,
+        port,
+        reuseAddress: reuseAddress,
+        reusePort: reusePort,
+        ttl: multicastHops,
+      );
+    } catch (e) {
+      if (reusePort) rethrow;
 
-    return socket;
+      // Retry with reusePort: true — on macOS/iOS the mDNS port is typically
+      // held by the system mDNSResponder service.
+      _log('Binding failed with reusePort=false, retrying with reusePort=true');
+      return await RawDatagramSocket.bind(
+        address,
+        port,
+        reuseAddress: reuseAddress,
+        reusePort: true,
+        ttl: multicastHops,
+      );
+    }
   }
 
   /// Handle incoming packets

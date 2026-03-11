@@ -357,43 +357,19 @@ class _Client {
   Future<void> _bindMulticastSocket(NetworkInterface? iface) async {
     // Create multicast connections
     if (_useIPv4) {
-      try {
-        _ipv4MulticastConn = await RawDatagramSocket.bind(
-          InternetAddress.anyIPv4,
-          mDNSPort,
-          reusePort: _reusePort,
-          reuseAddress: _reuseAddress,
-          ttl: _multicastHops,
-        );
-        _ipv4MulticastConn!.joinMulticast(InternetAddress(ipv4mDNS));
-        _log(
-          'IPv4 multicast socket bound to port $mDNSPort with reusePort=$_reusePort, reuseAddress=$_reuseAddress, multicastHops=$_multicastHops',
-        );
-      } catch (e) {
-        _log('Failed to create IPv4 multicast socket: $e');
-        _ipv4MulticastConn?.close();
-        _ipv4MulticastConn = null;
-      }
+      _ipv4MulticastConn = await _tryBindMulticast(
+        InternetAddress.anyIPv4,
+        InternetAddress(ipv4mDNS),
+        'IPv4',
+      );
     }
 
     if (_useIPv6) {
-      try {
-        _ipv6MulticastConn = await RawDatagramSocket.bind(
-          InternetAddress.anyIPv6,
-          mDNSPort,
-          reusePort: _reusePort,
-          reuseAddress: _reuseAddress,
-          ttl: _multicastHops,
-        );
-        _ipv6MulticastConn!.joinMulticast(InternetAddress(ipv6mDNS));
-        _log(
-          'IPv6 multicast socket bound to port $mDNSPort with reusePort=$_reusePort, reuseAddress=$_reuseAddress, multicastHops=$_multicastHops',
-        );
-      } catch (e) {
-        _log('Failed to create IPv6 multicast socket: $e');
-        _ipv6MulticastConn?.close();
-        _ipv6MulticastConn = null;
-      }
+      _ipv6MulticastConn = await _tryBindMulticast(
+        InternetAddress.anyIPv6,
+        InternetAddress(ipv6mDNS),
+        'IPv6',
+      );
     }
 
     if (_ipv4MulticastConn == null && _ipv6MulticastConn == null) {
@@ -401,6 +377,55 @@ class _Client {
       throw StateError('Failed to bind to any multicast UDP port');
     }
     if (iface != null) await _setMulticastInterface(iface);
+  }
+
+  /// Tries to bind a multicast socket. If binding fails and [_reusePort] is
+  /// false, retries with `reusePort: true` to handle platforms where the mDNS
+  /// port is already in use by a system service (e.g. mDNSResponder on
+  /// macOS/iOS).
+  Future<RawDatagramSocket?> _tryBindMulticast(
+    InternetAddress address,
+    InternetAddress multicastGroup,
+    String label,
+  ) async {
+    try {
+      final socket = await RawDatagramSocket.bind(
+        address,
+        mDNSPort,
+        reusePort: _reusePort,
+        reuseAddress: _reuseAddress,
+        ttl: _multicastHops,
+      );
+      socket.joinMulticast(multicastGroup);
+      _log(
+        '$label multicast socket bound to port $mDNSPort with reusePort=$_reusePort, reuseAddress=$_reuseAddress, multicastHops=$_multicastHops',
+      );
+      return socket;
+    } catch (e) {
+      _log('Failed to create $label multicast socket: $e');
+      if (_reusePort) return null;
+
+      // Retry with reusePort: true — on macOS/iOS the mDNS port is typically
+      // held by the system mDNSResponder service.
+      _log('Retrying $label multicast socket with reusePort=true');
+      try {
+        final socket = await RawDatagramSocket.bind(
+          address,
+          mDNSPort,
+          reusePort: true,
+          reuseAddress: _reuseAddress,
+          ttl: _multicastHops,
+        );
+        socket.joinMulticast(multicastGroup);
+        _log(
+          '$label multicast socket bound to port $mDNSPort with reusePort=true (retry succeeded)',
+        );
+        return socket;
+      } catch (e2) {
+        _log('Retry also failed for $label multicast socket: $e2');
+        return null;
+      }
+    }
   }
 
   /// Initializes the client sockets
