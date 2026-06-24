@@ -150,10 +150,17 @@ class MDNSServer {
   }
 
   /// Stop the mDNS server
+  ///
+  /// Sends goodbye packets (TTL=0) before closing sockets, as specified
+  /// by RFC 6762 Section 10.1, so that other mDNS clients on the network
+  /// can immediately remove the service from their caches.
   Future<void> stop() async {
     if (!_isRunning) return;
 
     _log('Stopping mDNS server...');
+
+    // Send goodbye packets before closing sockets
+    _sendGoodbye();
 
     // Cancel all subscriptions
     for (final subscription in _subscriptions) {
@@ -169,6 +176,40 @@ class MDNSServer {
 
     _isRunning = false;
     _log('mDNS server stopped');
+  }
+
+  /// Sends goodbye packets (all records with TTL=0) via multicast.
+  void _sendGoodbye() {
+    final records = _config.zone.goodbyeRecords();
+    if (records.isEmpty) return;
+
+    _log('Sending ${records.length} goodbye records');
+
+    int flags = 0;
+    flags |= DNSFlags.QR;
+    flags |= DNSFlags.AA;
+
+    final message = DNSMessage(
+      header: DNSHeader(
+        id: 0,
+        flags: flags,
+        qdcount: 0,
+        ancount: records.length,
+        nscount: 0,
+        arcount: 0,
+      ),
+      questions: [],
+      answers: records,
+      authority: [],
+      additional: [],
+    );
+
+    if (_ipv4Socket != null) {
+      _sendResponse(message, _ipv4Socket!, isUnicast: false);
+    }
+    if (_ipv6Socket != null) {
+      _sendResponse(message, _ipv6Socket!, isUnicast: false);
+    }
   }
 
   /// Binds a multicast socket with configurable socket options

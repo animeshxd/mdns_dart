@@ -797,6 +797,13 @@ class QuerySession {
     final newResults = <ServiceEntry>[];
 
     for (final record in records) {
+      // Handle goodbye packets (RFC 6762 Section 10.1): TTL=0 means
+      // the service is going away and should be removed from cache.
+      if (record.ttl == 0) {
+        _handleGoodbye(record);
+        continue;
+      }
+
       final entry = _ensureEntry(record.name);
       entry.host = entry.host.isEmpty ? record.name : entry.host;
 
@@ -883,6 +890,28 @@ class QuerySession {
       return true;
     }
     return false;
+  }
+
+  /// Handles a goodbye record (TTL=0) by removing the service from tracking,
+  /// allowing it to be re-discovered if it comes back.
+  void _handleGoodbye(DNSResourceRecord record) {
+    _log('Received goodbye (TTL=0) for: ${record.name}');
+
+    if (record case PTRRecord ptr) {
+      // PTR goodbye: remove both the alias and the target entry.
+      _inProgress.remove(ptr.name);
+      final entry = _inProgress.remove(ptr.target);
+      if (entry != null) {
+        _completedServices.remove(entry.name);
+      }
+      _completedServices.remove(ptr.target);
+    } else {
+      final entry = _inProgress.remove(record.name);
+      if (entry != null) {
+        _completedServices.remove(entry.name);
+      }
+      _completedServices.remove(record.name);
+    }
   }
 
   ServiceEntry _ensureEntry(String name) {
