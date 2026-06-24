@@ -294,9 +294,10 @@ class _Client {
 
     if (iface != null) {
       _log('Binding unicast sockets to interface: ${iface.name}');
-      // try {
+
+      final addresses = iface.addresses.cast<InternetAddress>();
       if (_useIPv4) {
-        ipv4Addr = iface.addresses.firstWhere(
+        ipv4Addr = addresses.firstWhere(
           (addr) => addr.type == InternetAddressType.IPv4,
           orElse: () {
             _log(
@@ -308,7 +309,7 @@ class _Client {
       }
 
       if (_useIPv6) {
-        ipv6Addr = iface.addresses.firstWhere(
+        ipv6Addr = addresses.firstWhere(
           (addr) => addr.type == InternetAddressType.IPv6,
           orElse: () {
             _log(
