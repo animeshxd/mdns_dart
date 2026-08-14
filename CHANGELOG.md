@@ -1,3 +1,6 @@
+## 2.2.2
+- Cast `iface.addresses` to `InternetAddress` for Dart 3.13+ compatibility. ([#18](https://github.com/animeshxd/mdns_dart/pull/18))
+
 ## 2.2.1
 - Refactored `MDNSService.create` to avoid filtering out explicitly provided IP addresses.  
 
